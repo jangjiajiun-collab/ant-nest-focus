@@ -113,7 +113,7 @@ details>summary::-webkit-details-marker{display:none}
 }
 </style>
 </head>
-<body data-theme="light">
+<body data-theme="dark">
 <canvas id="view" aria-label="Pixel-art ant farm on a floating island"></canvas>
 
 <div class="seedlabel" id="seedLabel"><span id="seedText"></span><i><b id="seedBar"></b></i></div>
@@ -238,7 +238,8 @@ scene.add(camera);
 const world=new THREE.Group(); scene.add(world);
 
 const ELEV=31*Math.PI/180, AZ0=Math.PI/4, CAM_DIST=70;
-const target0=new THREE.Vector3(0,-3.4,0);
+const target0=new THREE.Vector3(0,-2.7,0);
+const ZOOM0=innerWidth>=innerHeight?1.25:1;
 const POLAR=Math.PI/2-ELEV;
 
 const halfFloatOK=renderer.extensions.has('EXT_color_buffer_float')||renderer.extensions.has('EXT_color_buffer_half_float');
@@ -250,7 +251,7 @@ const postMat=new THREE.ShaderMaterial({
     tColor:{value:null}, tDepth:{value:null}, uRes:{value:new THREE.Vector2(480,300)},
     uNear:{value:camera.near}, uFar:{value:camera.far},
     uPalLab:{value:palLab}, uPalRGB:{value:palRGB},
-    uGrade:{value:new THREE.Vector3()}, uDither:{value:0.055}
+    uGrade:{value:new THREE.Vector3()}, uDither:{value:0.055}, uVig:{value:0.62}
   },
   vertexShader:`
     out vec2 vUv;
@@ -262,7 +263,7 @@ const postMat=new THREE.ShaderMaterial({
     uniform sampler2D tColor; uniform sampler2D tDepth;
     uniform vec2 uRes; uniform float uNear; uniform float uFar;
     uniform vec3 uPalLab[64]; uniform vec3 uPalRGB[64];
-    uniform vec3 uGrade; uniform float uDither;
+    uniform vec3 uGrade; uniform float uDither; uniform float uVig;
     in vec2 vUv;
     out vec4 outColor;
     const float BAYER[16]=float[16](0.,8.,2.,10., 12.,4.,14.,6., 3.,11.,1.,9., 15.,7.,13.,5.);
@@ -287,6 +288,8 @@ const postMat=new THREE.ShaderMaterial({
       e=max(e,vz(texelFetch(tDepth,clampP(p+ivec2(0,1)),0).r)-d0);
       e=max(e,vz(texelFetch(tDepth,clampP(p+ivec2(0,-1)),0).r)-d0);
       if(e>0.5) c*=0.5;                                  // depth outline
+      float vr=length((vUv-0.5)*vec2(uRes.x/uRes.y,1.0));
+      c*=mix(1.0-uVig,1.0,1.0-smoothstep(0.22,0.9,vr));     // dark edges, bright middle
       vec3 lab=toLab(c)+uGrade;
       float b=BAYER[(p.y&3)*4+(p.x&3)]/16.0-0.5;          // 4x4 Bayer
       lab.x+=b*uDither;
@@ -341,12 +344,13 @@ controls.rotateSpeed=1.0;
 controls.minZoom=0.4; controls.maxZoom=14;
 controls.zoomToCursor=true;
 controls.screenSpacePanning=true;
+camera.zoom=ZOOM0; camera.updateProjectionMatrix();
 controls.update();
 let snapAz=null, dragging=false;
 controls.addEventListener('start',()=>{snapAz=null;dragging=true});
 controls.addEventListener('end',()=>{ dragging=false; });
 canvas.addEventListener('dblclick',()=>{      // double click / tap: back to the default isometric view
-  camera.zoom=1; camera.updateProjectionMatrix(); controls.target.copy(target0);
+  camera.zoom=ZOOM0; camera.updateProjectionMatrix(); controls.target.copy(target0);
   camera.position.set(target0.x+CAM_DIST*Math.cos(ELEV)*Math.sin(AZ0),target0.y+CAM_DIST*Math.sin(ELEV),target0.z+CAM_DIST*Math.cos(ELEV)*Math.cos(AZ0));
   controls.update();
 });
@@ -380,15 +384,15 @@ const SOILH=ROWS*CELL;              // 5.5
 const NODE={};
 const addN=(id,x,y,kind)=>{NODE[id]={id,x,y,kind};return NODE[id]};
 // surface line
-addN('s0',-6.2,.17,'surf'); addN('s1',-2.5,.17,'surf'); addN('s2',1.0,.17,'surf'); addN('s3',4.8,.17,'surf'); addN('s4',6.5,.17,'surf');
+addN('s0',-6.2,.155,'surf'); addN('s1',-2.5,.155,'surf'); addN('s2',1.0,.155,'surf'); addN('s3',4.8,.155,'surf'); addN('s4',6.5,.155,'surf');
 // shaft
 addN('t1',-2.5,-.9,'tun'); addN('t2',-2.5,-2.2,'tun'); addN('t3',-2.5,-3.4,'tun');
 addN('m1',-3.5,-1.3,'tun'); addN('m2',-1.5,-2.3,'tun'); addN('m3',-3.2,-3.5,'tun');
 
 const CH=[]; // chambers
 function addChamber(o){
-  const c=Object.assign({built:false,glow:0,lit:0,stock:0,rx:o.r*1.2,ry:o.r*.88,seeds:[]},o);
-  c.nodeId='c_'+c.id; c.nodeY=c.cy-c.ry+.22;
+  const c=Object.assign({built:false,glow:0,lit:0,stock:0,rx:o.r*1.2,ry:o.r*.6,seeds:[]},o);
+  c.nodeId='c_'+c.id; c.nodeY=c.cy-c.ry+.17;
   addN(c.nodeId,c.cx,c.nodeY,'chamber'); NODE[c.nodeId].chamber=c;
   CH.push(c); return c;
 }
@@ -401,7 +405,7 @@ addChamber({id:'c',name:'Hall C',role:'hall',cx:-3.4,cy:-5.0,r:.55,from:'c_store
 addChamber({id:'d',name:'Hall D',role:'hall',cx:2.9,cy:-5.0,r:.55,from:'c_b',cost:8,need:22});
 
 const EDGES=[];
-const addE=(a,b,o={})=>{const A=NODE[a],B=NODE[b];EDGES.push(Object.assign({a,b,ph:.12,built:true,r:.3,surf:false,len:Math.hypot(A.x-B.x,A.y-B.y)},o))};
+const addE=(a,b,o={})=>{const A=NODE[a],B=NODE[b];EDGES.push(Object.assign({a,b,ph:.12,built:true,r:.17,surf:false,len:Math.hypot(A.x-B.x,A.y-B.y)},o))};
 addE('s0','s1',{surf:true,r:0});addE('s1','s2',{surf:true,r:0});addE('s2','s3',{surf:true,r:0});addE('s3','s4',{surf:true,r:0});
 addE('s1','t1');addE('t1','t2');addE('t2','t3');
 addE('t1','m1');addE('m1','c_nurs');addE('t2','m2');addE('m2','c_gran');addE('t3','m3');addE('m3','c_store');
@@ -705,10 +709,14 @@ const man1=makeMan(0xC04050,0xE8A93C), man2=makeMan(0x4A7DE2,0xF5F1E8);
 /* =====================================================================
    7. lights, sky, stars, clouds
    ===================================================================== */
-const sun=new THREE.DirectionalLight(0xFFF1D0,3); sun.castShadow=true;
+const sun=new THREE.DirectionalLight(0xFFF1D0,.4); sun.castShadow=false;
 sun.shadow.mapSize.set(1024,1024); sun.shadow.bias=-.0006; sun.shadow.normalBias=.03;
 const sc=sun.shadow.camera; sc.left=-13;sc.right=13;sc.top=13;sc.bottom=-13;sc.near=1;sc.far=90;
 scene.add(sun,sun.target); sun.target.position.set(0,-3,0);
+// the one warm lamp above the tank: hard shadows, soft pool of light
+const keyLamp=new THREE.SpotLight(0xFFE6BE,85,0,.62,.9,1); keyLamp.position.set(0,17,11); keyLamp.target.position.set(0,-2.6,0);
+keyLamp.castShadow=true; keyLamp.shadow.mapSize.set(2048,2048); keyLamp.shadow.bias=-.0004; keyLamp.shadow.normalBias=.03;
+keyLamp.shadow.camera.near=4; keyLamp.shadow.camera.far=60; scene.add(keyLamp,keyLamp.target);
 const hemi=new THREE.HemisphereLight(0xBFD8FF,0x8B5A3C,1.5); scene.add(hemi);
 // chamber lights
 for(const c of CH){
@@ -740,7 +748,7 @@ for(let k=0;k<4;k++){
   const g=new THREE.Group();
   const n=3+Math.floor(R()*3);
   for(let b=0;b<n;b++) box(1+R()*1.2,.35+R()*.25,.9,cloudMat,b*.9-n*.4,R()*.25,0,g,false);
-  g.position.set(-14+k*8,7+R()*3,-6-R()*5); scene.add(g); clouds.push(g);
+  g.position.set(-14+k*8,7+R()*3,-6-R()*5); g.visible=false; scene.add(g); clouds.push(g);
 }
 
 /* =====================================================================
@@ -751,7 +759,7 @@ const antMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.Mes
 antMesh.castShadow=true; antMesh.frustumCulled=false; world.add(antMesh);
 _m.makeScale(0,0,0); for(let i=0;i<MAXANTS*PARTS;i++) antMesh.setMatrixAt(i,_m);
 antMesh.count=0;
-const seedInst=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.075,0),new THREE.MeshBasicMaterial({color:0xFFD07A}),200);
+const seedInst=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.06,0),new THREE.MeshBasicMaterial({color:0xFFD07A}),200);
 seedInst.frustumCulled=false; world.add(seedInst);
 const SEED_CARRY=40; // slots 0..39 carried, 40.. stock
 for(let i=0;i<200;i++) seedInst.setMatrixAt(i,_m);
@@ -765,10 +773,10 @@ const _f=new THREE.Vector3(),_u=new THREE.Vector3(),_l=new THREE.Vector3(),_bm=n
 const _h=new THREE.Vector3(),_ft=new THREE.Vector3(),_kn=new THREE.Vector3(),_pole=new THREE.Vector3(),_d=new THREE.Vector3(),_pp=new THREE.Vector3(),_z=new THREE.Vector3(0,0,1),_v=new THREE.Vector3();
 const ants=[];
 let antSeq=0;
-function newAnt(nodeId,scale=1){
+function newAnt(nodeId,scale=.8){
   const n=NODE[nodeId];
   const a={id:antSeq++,x:n.x+rr(-.15,.15),y:n.y,z:rr(.45,1.1),node:nodeId,route:[],ri:0,plan:[],step:null,
-    tx:1,ty:0,nx:0,ny:1,speed:.75*(.9+Math.random()*.2),moving:false,carry:null,anim:null,animT:rr(0,6),wait:0,idleT:rr(.5,3),
+    tx:1,ty:0,nx:0,ny:1,speed:.5*(.9+Math.random()*.2),moving:false,carry:null,anim:null,animT:rr(0,6),wait:0,idleT:rr(.5,3),
     role:null,pauseT:0,lookYaw:0,legs:[],scale,born:performance.now(),face:null,bob:rr(0,6),lastEdgeFrom:null};
   for(let i=0;i<6;i++) a.legs.push({p:new THREE.Vector3(),from:new THREE.Vector3(),to:new THREE.Vector3(),t:1,stepping:false});
   ants.push(a); antMesh.count=ants.length*PARTS;
@@ -796,12 +804,13 @@ function setSeg(idx,a,b,th){
   _p.addVectors(a,b).multiplyScalar(.5); _s.set(th,th,len);
   _m.compose(_p,_q,_s); antMesh.setMatrixAt(idx,_m);
 }
-function ik(h,f,pole,out){
+function ik(h,f,pole,out,sc){
+  const A_LEG_=A_LEG*sc, B_LEG_=B_LEG*sc;
   _d.subVectors(f,h); let L=_d.length();
-  const maxL=(A_LEG+B_LEG)*.995, minL=Math.abs(A_LEG-B_LEG)+.01;
+  const maxL=(A_LEG_+B_LEG_)*.995, minL=Math.abs(A_LEG_-B_LEG_)+.01;
   const dirx=_d.x/(L||1),diry=_d.y/(L||1),dirz=_d.z/(L||1);
   L=clamp(L,minL,maxL);
-  const x=(A_LEG*A_LEG-B_LEG*B_LEG+L*L)/(2*L), y=Math.sqrt(Math.max(A_LEG*A_LEG-x*x,0));
+  const x=(A_LEG_*A_LEG_-B_LEG_*B_LEG_+L*L)/(2*L), y=Math.sqrt(Math.max(A_LEG_*A_LEG_-x*x,0));
   const dot=pole.x*dirx+pole.y*diry+pole.z*dirz;
   let px=pole.x-dirx*dot, py=pole.y-diry*dot, pz=pole.z-dirz*dot; const pl=Math.hypot(px,py,pz)||1;
   px/=pl;py/=pl;pz/=pl;
@@ -862,7 +871,7 @@ function drawAnt(a,slot,dt,time){
     }
     _h.copy(P).addScaledVector(f,HIP_F[k]*sc).addScaledVector(u,-.03*sc).addScaledVector(l,s*.035*sc);
     _pole.copy(u).multiplyScalar(.9).addScaledVector(l,s*.35).addScaledVector(f,k===0?.25:(k===2?-.25:0));
-    ik(_h,leg.p,_pole,_kn);
+    ik(_h,leg.p,_pole,_kn,sc);
     const o=base+3+i*2;
     _v.copy(_kn);
     setSeg(o,_h,_v,.045*sc);
@@ -1007,12 +1016,12 @@ function digCount(){return ants.filter(a=>a.stick==='tip'||(a.plan.length&&a.pla
 function goDig(a){ if(!NODE.tip||!NODE.tip.active) return; setPlan(a,[{go:'tip'},{wait:Infinity,anim:'dig',stick:'tip'}]); }
 function goHaul(a){
   const g=builtChambers().find(c=>c.role==='granary'); if(!g) return;
-  setPlan(a,[{go:'s2'},{moveTo:{x:rr(.2,1.6),y:.17}},{wait:.8,anim:'chew'},{fn:x=>{x.carry='seed'}},{go:'c_gran'},
+  setPlan(a,[{go:'s2'},{moveTo:{x:rr(.2,1.6),y:.155}},{wait:.8,anim:'chew'},{fn:x=>{x.carry='seed'}},{go:'c_gran'},
     {fn:x=>{x.carry=null; addStock(g,1,true);}},{wait:1}]);
 }
 function goUndertaker(a){
   const d=deadItems.find(x=>!x.claimed); if(!d) return; d.claimed=true;
-  setPlan(a,[{go:d.nodeId},{wait:.8,anim:'tend'},{fn:x=>{x.carry='dead';d.carriedBy=x;}},{go:'s0'},{moveTo:{x:-6.2+rr(-.3,.3),y:.17}},
+  setPlan(a,[{go:d.nodeId},{wait:.8,anim:'tend'},{fn:x=>{x.carry='dead';d.carriedBy=x;}},{go:'s0'},{moveTo:{x:-6.2+rr(-.3,.3),y:.155}},
     {fn:x=>{x.carry=null; dropDead(d);}},{wait:.8}]);
 }
 
@@ -1068,7 +1077,7 @@ function updateBrood(dt){
       b.mesh.scale.setScalar(Math.max(.01,1-b.t/1.6));
       if(b.t>=1.6){
         world.remove(b.mesh); brood.splice(i,1);
-        if(ants.length<MAXANTS){ const a=newAnt('c_nurs',1); a.x=b.x; a.y=NODE.c_nurs.y; log('A new worker has emerged.'); refreshUI(); save(); }
+        if(ants.length<MAXANTS){ const a=newAnt('c_nurs'); a.x=b.x; a.y=NODE.c_nurs.y; log('A new worker has emerged.'); refreshUI(); save(); }
       }
     }
   }
@@ -1124,7 +1133,7 @@ function startDig(c){
   if(dig.job||colony.food<cost||ants.length<need) return false;
   colony.food-=cost; c.digging=true;
   const J=NODE[c.from], target=NODE[c.nodeId];
-  const tun=cellsCapsule(J.x,J.y,target.x,target.y,.3).filter(x=>solid[cidx(x.i,x.j)]).sort((a,b)=>a.t-b.t);
+  const tun=cellsCapsule(J.x,J.y,target.x,target.y,.17).filter(x=>solid[cidx(x.i,x.j)]).sort((a,b)=>a.t-b.t);
   const cham=cellsEllipse(c.cx,c.cy,c.rx,c.ry).filter(x=>solid[cidx(x.i,x.j)]).sort((a,b)=>a.d-b.d);
   const cells=tun.concat(cham.filter(x=>!tun.some(y=>y.i===x.i&&y.j===x.j)));
   const tip=addN('tip',J.x,J.y,'tip'); tip.active=true;
@@ -1177,13 +1186,13 @@ function updateDebris(dt){
 const F={phase:'none',task:'',running:false,left:1500,total:1500,bright:1,foragers:[],carrier:null,seed:null,doneT:0,hiddenAt:0,landT:0};
 const FOR_NODE='s3';
 let timeScale=1;
-const seedMesh=new THREE.Mesh(new THREE.IcosahedronGeometry(.2,1),new THREE.MeshBasicMaterial({color:0xFFD07A}));
+const seedMesh=new THREE.Mesh(new THREE.IcosahedronGeometry(.16,1),new THREE.MeshBasicMaterial({color:0xFFD07A}));
 seedMesh.visible=false; world.add(seedMesh);
 const seedHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(),color:0xFFD07A,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
 seedHalo.scale.setScalar(1.8); world.add(seedHalo);
 const seedLight=new THREE.PointLight(0xFFD07A,0,4.5,1.5); world.add(seedLight);
 const motes=[0,1].map(()=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.06),new THREE.MeshBasicMaterial({color:0xFFE9A8,transparent:true,depthWrite:false})); m.visible=false; world.add(m); return m; });
-const seedPos=new THREE.Vector3(NODE[FOR_NODE].x,.22,.85);
+const seedPos=new THREE.Vector3(NODE[FOR_NODE].x,.17,.85);
 function setBtn(){
   const b=$('go');
   if(F.phase==='none'||F.phase==='done') b.textContent='START';
@@ -1206,7 +1215,7 @@ function dispatch(){
   const sp=NODE[FOR_NODE];
   F.foragers.forEach((a,i)=>{
     const side=i%2?1:-1, off=side*(.28+Math.floor(i/2)*.22);
-    setPlan(a,[{wait:i*.8+rr(0,.3)},{go:FOR_NODE},{moveTo:{x:sp.x+off,y:.17}},{fn:x=>{x.arrived=true}},{wait:.5,anim:'touch',face:{x:seedPos.x,y:seedPos.y}},{wait:Infinity,anim:'chew',face:{x:seedPos.x,y:seedPos.y}}]);
+    setPlan(a,[{wait:i*.8+rr(0,.3)},{go:FOR_NODE},{moveTo:{x:sp.x+off,y:.155}},{fn:x=>{x.arrived=true}},{wait:.5,anim:'touch',face:{x:seedPos.x,y:seedPos.y}},{wait:Infinity,anim:'chew',face:{x:seedPos.x,y:seedPos.y}}]);
     a.arrived=false; a.role='forager';
   });
   log(`${F.foragers.length} foragers leave the nest.`);
@@ -1253,7 +1262,7 @@ function focusActive(){return F.running&&!document.hidden}
 function updateFocus(dt){
   // seed physics
   if(F.phase!=='none'&&F.phase!=='done'||seedMesh.visible){
-    if(seedPos.y>.22&&F.phase!=='carry'){ F.landT+=dt; seedPos.y=Math.max(.22,7-9*F.landT*F.landT*1.2); if(seedPos.y<=.22){ seedPos.y=.22; } }
+    if(seedPos.y>.17&&F.phase!=='carry'){ F.landT+=dt; seedPos.y=Math.max(.17,7-9*F.landT*F.landT*1.2); if(seedPos.y<=.17){ seedPos.y=.17; } }
   }
   if(F.phase==='out'){
     if(focusActive()){
@@ -1391,9 +1400,9 @@ function updateWeather(dt,now){
    ===================================================================== */
 let hourOverride=null;
 function hourNow(){ if(hourOverride!==null) return hourOverride; const d=new Date(); return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600; }
-const cNightBg=col('#0E1530'), cDayBg=col('#A9C7F0'), cDusk1=col('#8E6BB8'), cDusk2=col('#F08A4B'), cRain=col('#9A978F');
+const cNightBg=col('#120D0B'), cDayBg=col('#3E2A20'), cDuskBg=col('#4A2B1E'), cLampNight=col('#FFB070'), cLampDay=col('#FFE6BE'), cDusk1=col('#8E6BB8'), cDusk2=col('#F08A4B'), cRain=col('#9A978F');
 const cSunDay=col('#FFF1D0'), cSunDusk=col('#FFB070'), cMoon=col('#7C97E8');
-const cHSkyD=col('#BFD8FF'), cHSkyN=col('#3A4A8C'), cHGrD=col('#8B5A3C'), cHGrN=col('#1A1A1A');
+const cHSkyD=col('#D9C4A8'), cHSkyN=col('#3A4A8C'), cHGrD=col('#3E2A20'), cHGrN=col('#1A1A1A');
 const bgNow=scene.background, tmpC=new THREE.Color();
 const cCloudDay=col('#F5F1E8'), cCloudDusk=col('#FFB070'), cCloudNight=col('#2E4A8C');
 function updateSky(){
@@ -1402,18 +1411,13 @@ function updateSky(){
   const dayF=smooth(-.05,.3,e), duskF=clamp(1-Math.abs(e+.02)*4.2,0,1);
   nightF=1-dayF;
   const rain=weather.rain;
-  bgNow.copy(cNightBg).lerp(cDayBg,dayF);
-  tmpC.copy(cDusk1).lerp(cDusk2,dayF); bgNow.lerp(tmpC,duskF*.85);
-  bgNow.lerp(cRain,rain*.55*dayF);
-  sun.color.copy(cMoon).lerp(cSunDay,dayF).lerp(cSunDusk,duskF*.8);
-  sun.intensity=lerp(1.1,3.1,dayF)*(1-.5*rain)*lerp(1,.75,duskF);
-  const ph=Math.PI*(h-6)/12;
-  const sx=e>0?Math.cos(ph)*20:-9, sy=e>0?Math.max(e,.18)*22+3:20, sz=13;
-  sun.position.set(sx,sy,sz);
+  bgNow.copy(cNightBg).lerp(cDayBg,dayF).lerp(cDuskBg,duskF*.6).lerp(cRain,rain*.2*dayF);
+  keyLamp.color.copy(cLampNight).lerp(cLampDay,dayF).lerp(cSunDusk,duskF*.5);
+  keyLamp.intensity=lerp(48,85,dayF)*(1-.2*rain);
+  sun.color.copy(cMoon).lerp(cSunDay,dayF*.6); sun.intensity=lerp(.3,.5,dayF); sun.position.set(-8,16,12);
   hemi.color.copy(cHSkyN).lerp(cHSkyD,dayF); hemi.groundColor.copy(cHGrN).lerp(cHGrD,dayF);
-  hemi.intensity=lerp(1.0,1.55,dayF)*(1-.15*rain);
-  starMat.opacity=clamp((nightF-.3)*1.6,0,1)*(1-rain);
-  cloudMat.color.copy(cCloudDay).lerp(cCloudDusk,duskF*.7).lerp(cCloudNight,nightF*.85).lerp(cRain,rain*.5);
+  hemi.intensity=lerp(.5,.8,dayF);
+  starMat.opacity=0;
   // artificial light
   const lamp=smooth(.2,.8,nightF);
   flood.intensity=lamp*28; (lampHead.material).color.setHex(lamp>.3?0xFFD07A:0x3E2A20);
@@ -1506,7 +1510,7 @@ function load(){
     const c=CH.find(x=>x.id===id); if(!c||c.built) continue; c.built=true;
     const e=EDGES.find(x=>x.slot===c.id); if(e) e.built=true;
     const A=NODE[c.from],B=NODE[c.nodeId];
-    for(const x of cellsCapsule(A.x,A.y,B.x,B.y,.3)) removeCell(x.i,x.j);
+    for(const x of cellsCapsule(A.x,A.y,B.x,B.y,.17)) removeCell(x.i,x.j);
     for(const x of cellsEllipse(c.cx,c.cy,c.rx,c.ry)) removeCell(x.i,x.j);
   }
   rebuildAdj(); buildDots();

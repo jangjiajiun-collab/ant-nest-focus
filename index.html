@@ -9,12 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Rubik:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#F5F1E8; --panel:rgba(245,241,232,.9); --ink:#2A1D17; --mute:#7A5C46; --line:#8B5A3C;
-  --accent:#C67B5C; --accent-ink:#fff; --lit:#FFD07A; --scorebg:#1A1A1A; --field:#fff; --shadow:#C67B5C55;
+  --bg:#F5F1E8; --halo:#F5F1E8; --panel:rgba(245,241,232,.92); --ink:#2A1D17; --mute:#7A5C46; --line:#8B5A3C;
+  --accent:#C67B5C; --accent-ink:#fff; --lit:#FFD07A; --field:#fff; --shadow:#C67B5C55;
 }
 [data-theme="dark"]{
-  --bg:#120D0B; --panel:rgba(30,24,21,.9); --ink:#F5F1E8; --mute:#BFA17E; --line:#5A3A2A;
-  --accent:#E39A78; --accent-ink:#1A1A1A; --lit:#FFD07A; --scorebg:#0b0806; --field:#2B1D17; --shadow:#00000066;
+  --bg:#120D0B; --halo:#120D0B; --panel:rgba(30,24,21,.92); --ink:#F5F1E8; --mute:#BFA17E; --line:#5A3A2A;
+  --accent:#E39A78; --accent-ink:#1A1A1A; --lit:#FFD07A; --field:#2B1D17; --shadow:#00000066;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Rubik,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
@@ -23,49 +23,65 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
 .ui{position:fixed;inset:0;pointer-events:none}
 .ui > *{pointer-events:auto}
 .px{border:2px solid var(--line);box-shadow:3px 3px 0 var(--shadow);background:var(--panel);backdrop-filter:blur(2px)}
-.title{position:absolute;left:12px;top:10px;max-width:46vw;pointer-events:none}
-.title h1{font:700 17px/1 Silkscreen,monospace;margin:0;letter-spacing:.5px;color:var(--ink);text-shadow:2px 2px 0 var(--shadow)}
-.title p{margin:5px 0 0;font:500 12px/1.2 Rubik,sans-serif;color:var(--mute)}
-.log{margin-top:8px;font:400 10.5px/1.45 "JetBrains Mono",monospace;color:var(--mute);max-width:300px}
-.log div{opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.halo{text-shadow:0 0 8px var(--halo),0 0 3px var(--halo),0 0 1px var(--halo)}
+
+/* title: anchored top-left, two lines */
+.title{position:absolute;left:24px;top:24px;pointer-events:none}
+.title h1{margin:0;font:700 48px/.85 Silkscreen,monospace;letter-spacing:-.02em;text-transform:uppercase;color:var(--ink)}
+.title p{margin:16px 0 0;font:400 10px/1 Rubik,sans-serif;letter-spacing:.25em;opacity:.4;text-transform:uppercase}
+.timer{margin-top:14px}
+.timer b{display:block;font:400 22px/1 Silkscreen,monospace;letter-spacing:.04em}
+.timer small{display:block;margin-top:5px;font:400 9px/1 Rubik,sans-serif;letter-spacing:.2em;opacity:.4}
+.log{margin-top:10px;font:400 10px/1.5 "JetBrains Mono",monospace;opacity:.55;max-width:250px}
+.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .log div:nth-last-child(n+4){display:none}
-.score{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
-.score .row{display:flex;gap:6px;background:var(--scorebg);padding:6px 8px;border:2px solid #5A3A2A;box-shadow:3px 3px 0 var(--shadow)}
-.score .cell{min-width:64px;text-align:center}
-.score label{display:block;font:400 9px/1 Silkscreen,monospace;color:#BFA17E;letter-spacing:1px}
-.score output{display:block;font:700 22px/1.15 Silkscreen,monospace;color:var(--lit);text-shadow:0 0 6px #FFD07A99,0 0 14px #F08A4B66;letter-spacing:1px}
-.score output small{font-size:11px;color:#BFA17E;text-shadow:none}
-.timer{background:var(--scorebg);border:2px solid #5A3A2A;padding:3px 12px 4px;text-align:center;box-shadow:3px 3px 0 var(--shadow)}
-.timer b{display:block;font:700 26px/1.1 Silkscreen,monospace;color:var(--lit);text-shadow:0 0 8px #FFD07A88;letter-spacing:2px}
-.timer small{font:400 9px/1 Silkscreen,monospace;color:#BFA17E;letter-spacing:1px}
-.rail{position:absolute;right:12px;top:10px;width:262px;padding:10px;display:flex;flex-direction:column;gap:8px}
-.rail label.cap,.rail summary{font:400 10px/1 Silkscreen,monospace;color:var(--mute);letter-spacing:1px}
+
+/* scoreboard: anchored right edge, vertical stack */
+.score{position:absolute;right:24px;top:24px;text-align:right;pointer-events:none}
+.score > div{margin-bottom:8px}
+.score label{display:block;font:400 9px/1 Rubik,sans-serif;letter-spacing:.2em;opacity:.3}
+.score output{display:block;font:400 13px/1.8 Silkscreen,monospace;letter-spacing:.06em}
+
+/* task: a small wooden sign hanging off the glass case */
+.tasksign{position:fixed;left:0;top:0;z-index:4;width:max-content;max-width:210px}
+.tasksign .strings{position:relative;height:16px}
+.tasksign .strings i{position:absolute;top:0;bottom:0;width:1px;background:#5A3A2A}
+.tasksign .strings i:nth-child(1){left:22%;transform:rotate(14deg);transform-origin:top}
+.tasksign .strings i:nth-child(2){right:22%;transform:rotate(-14deg);transform-origin:top}
+.tasksign .tag{transform:rotate(-2deg);background:#C67B5C;border:2px solid #8B5A3C;box-shadow:2px 2px 0 #5A3A2A66;padding:7px 12px;min-width:112px}
+#task{font:400 12px/1.3 Silkscreen,monospace;color:#2B1D17;text-align:center;text-transform:uppercase;outline:none;white-space:pre-wrap;word-break:break-word;caret-color:#2B1D17;min-height:1.3em;-webkit-user-select:text;user-select:text}
+#task:empty::before{content:attr(data-ph);opacity:.55}
+#task.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* controls: bottom-left */
+.rail{position:absolute;left:24px;bottom:24px;width:226px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.rail summary{font:400 10px/1 Silkscreen,monospace;color:var(--mute);letter-spacing:1px}
 .rail .stack{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .rail .stack .full{grid-column:1/-1}
-.rail input[type=text]{width:100%;font:500 15px Rubik,sans-serif;padding:9px 10px;border:2px solid var(--line);background:var(--field);color:var(--ink);border-radius:0;outline:none}
-.rail input[type=text]:focus{border-color:var(--accent)}
-.rail input.shake{animation:shake .3s}
-@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 button{font:400 12px Silkscreen,monospace;letter-spacing:.5px;color:var(--ink);background:var(--field);border:2px solid var(--line);padding:9px 8px;cursor:pointer;border-radius:0;box-shadow:2px 2px 0 var(--shadow);min-height:40px}
 button:active{transform:translate(2px,2px);box-shadow:none}
 button:disabled{opacity:.45;cursor:not-allowed}
 button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--ink);font-size:15px;font-weight:700}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .colony{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .colony button{text-align:left;font-size:11px;line-height:1.25;padding:7px 8px}
 .colony button span{display:block;font:400 11px Rubik,sans-serif;color:var(--mute);margin-top:2px}
 .linkbtn{background:none;border:none;box-shadow:none;color:var(--mute);text-decoration:underline;font:400 11px Rubik,sans-serif;min-height:24px;padding:2px;text-align:left}
 details>summary{cursor:pointer;list-style:none}
 details>summary::-webkit-details-marker{display:none}
-.rail summary::before,.how summary::before{content:"+ ";}
-details[open]>summary::before{content:"- ";}
-.how{position:absolute;left:12px;bottom:12px;width:min(520px,calc(100vw - 310px));padding:8px 10px;max-height:46vh;overflow:auto}
-.how summary{font:400 11px Silkscreen,monospace;color:var(--ink);letter-spacing:1px}
-.how p{font:400 12.5px/1.5 Rubik,sans-serif;margin:8px 0;color:var(--ink)}
-.how code{font:400 11px "JetBrains Mono",monospace;background:var(--field);padding:1px 4px}
+.rail summary::before{content:"+ "}
+.rail details[open]>summary::before{content:"- "}
+
+/* footer: tiny, collapsed, bottom-right */
+.how{position:absolute;right:24px;bottom:24px;max-width:min(380px,calc(100vw - 48px));font:400 9px/1.5 "JetBrains Mono",monospace;color:var(--ink);opacity:.3;text-align:right}
+.how[open]{opacity:.92;text-align:left;background:var(--panel);border:2px solid var(--line);box-shadow:3px 3px 0 var(--shadow);padding:8px 10px;max-height:55vh;overflow:auto}
+.how summary{font:400 9px/1.5 "JetBrains Mono",monospace;letter-spacing:.08em}
+.how p{font:400 9.5px/1.55 "JetBrains Mono",monospace;margin:7px 0}
+.how button{font-size:9px;min-height:26px;padding:4px 7px}
 .sw{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;margin:6px 0}
 .sw i{display:block;aspect-ratio:1;border:1px solid #0003}
-.card{position:absolute;left:12px;top:150px;width:min(300px,calc(100vw - 24px));padding:10px 12px;display:none}
+
+.card{position:absolute;right:24px;top:190px;width:min(290px,calc(100vw - 48px));padding:10px 12px;display:none}
 .card.on{display:block}
 .card h3{margin:0 0 4px;font:700 13px Silkscreen,monospace;color:var(--accent)}
 .card p{margin:0;font:400 13px/1.45 Rubik,sans-serif}
@@ -77,24 +93,23 @@ details[open]>summary::before{content:"- ";}
 .seedlabel i b{display:block;height:100%;background:#FFD07A;width:100%}
 .uitoggle{display:none;position:fixed;right:10px;bottom:10px;z-index:9;min-height:34px;padding:4px 8px;font-size:10px}
 @media (max-width:760px){
-  .title{max-width:40vw}
-  .title h1{font-size:13px}.title p{font-size:10.5px}
+  .title{left:16px;top:16px}
+  .title h1{font-size:30px}
+  .timer b{font-size:18px}
   .log{display:none}
-  .score{top:50px}
-  .score output{font-size:17px}.score .cell{min-width:56px}
-  .rail{right:0;left:0;top:auto;bottom:0;width:auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-width:2px 0 0;box-shadow:none}
+  .score{right:16px;top:16px}
+  .rail{right:0;left:0;bottom:0;width:auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-width:2px 0 0;box-shadow:none}
   .rail .stack{gap:6px}
-  .rail input[type=text]{font-size:16px;padding:8px}
-  .how{left:0;right:0;bottom:var(--railh,200px);width:auto;border-width:2px 0 0;box-shadow:none;max-height:40vh}
-  .card{top:auto;bottom:210px;left:8px}
+  .how{right:10px;bottom:calc(var(--railh,200px) + 8px)}
+  .card{top:auto;bottom:calc(var(--railh,200px) + 36px);right:10px}
 }
 @media (orientation:landscape) and (max-height:520px){
   .ui{display:none}
   body.show-ui .ui{display:block}
   .uitoggle{display:block}
   .how{display:none}
-  .score{top:6px}
-  .rail{width:230px;top:6px;max-height:calc(100vh - 12px);overflow:auto}
+  .title h1{font-size:26px}
+  .rail{width:210px;bottom:12px;left:12px;max-height:calc(100vh - 24px);overflow:auto}
 }
 </style>
 </head>
@@ -104,27 +119,23 @@ details[open]>summary::before{content:"- ";}
 <div class="seedlabel" id="seedLabel"><span id="seedText"></span><i><b id="seedBar"></b></i></div>
 
 <div class="ui" id="ui">
-  <header class="title">
-    <h1>ANT NEST FOCUS</h1>
-    <p>Feed focus to the colony</p>
+  <header class="title halo">
+    <h1>ANT NEST<br>FOCUS</h1>
+    <p>FEED</p>
+    <div class="timer"><b id="timer">25:00</b><small id="sub">DAY 1 · SPRING</small></div>
     <div class="log" id="log"></div>
   </header>
 
-  <section class="score" aria-label="Scoreboard">
-    <div class="row">
-      <div class="cell"><label>FOOD</label><output id="sFood">000</output></div>
-      <div class="cell"><label>WORKERS</label><output id="sWork">008</output></div>
-      <div class="cell"><label>CHAMBERS</label><output id="sCham">3<small>/7</small></output></div>
-    </div>
-    <div class="timer"><b id="timer">25:00</b><small id="sub">DAY 1 · SPRING</small></div>
+  <section class="score halo" aria-label="Scoreboard">
+    <div><label>FOOD</label><output id="sFood">000</output></div>
+    <div><label>WORKERS</label><output id="sWork">008</output></div>
+    <div><label>TODAY</label><output id="sToday">000</output></div>
   </section>
+
+  <div class="tasksign" id="taskSign"><div class="strings"><i></i><i></i></div><div class="tag"><div id="task" contenteditable="true" role="textbox" aria-label="Task" data-ph="TAP TO NAME A TASK" spellcheck="false" autocapitalize="characters"></div></div></div>
 
   <aside class="rail px" id="rail">
     <div class="stack">
-      <div class="full">
-        <label class="cap" for="task">TASK</label>
-        <input type="text" id="task" maxlength="40" placeholder="What will the colony carry?" autocomplete="off">
-      </div>
       <button class="primary full" id="go">START</button>
       <button id="theme">LIGHT / DARK</button>
       <button id="season">SEASON: AUTO</button>
@@ -142,8 +153,8 @@ details[open]>summary::before{content:"- ";}
 
   <div class="card px" id="card"><button id="cardX">X</button><h3 id="cardT"></h3><p id="cardP"></p><small id="cardS"></small></div>
 
-  <details class="how px" id="how">
-    <summary>HOW IT'S DRAWN</summary>
+  <details class="how" id="how">
+    <summary>how it's drawn</summary>
     <p><b>Render.</b> The scene is drawn by three.js (r160) into a tiny <code>~480×300</code> target with no anti-aliasing, then scaled up with <code>texelFetch</code>. An orthographic camera sits at 31° elevation and snaps to quarter-turn azimuths. A depth pass darkens any pixel more than 0.5 world units in front of a neighbour.</p>
     <p><b>Palette.</b> Every pixel is matched to one of 64 fixed colours in OKLab, after a 4×4 Bayer dither nudges its lightness. Nothing outside this palette ever reaches the screen:</p>
     <div class="sw" id="sw"></div>
@@ -481,9 +492,30 @@ for(let j=0;j<ROWS;j++)for(let i=0;i<COLS;i++){
   soil.setColorAt(k,_c);
 }
 world.add(soil);
+// rounded corner shadows: where soil meets a hole on two sides, a dark quarter-fillet eats the corner
+const FR=CELL*.55, FMAX=900;
+const filShape=new THREE.Shape(); filShape.moveTo(0,0); filShape.lineTo(-FR,0); filShape.absarc(-FR,-FR,FR,Math.PI/2,0,true); filShape.lineTo(0,0);
+const fillets=new THREE.InstancedMesh(new THREE.ShapeGeometry(filShape,6),new THREE.MeshBasicMaterial({color:0x2B1D17,side:THREE.DoubleSide}),FMAX);
+fillets.frustumCulled=false; fillets.count=0; world.add(fillets);
+function isEmptyCell(i,j){ if(j<0) return true; if(i<0||i>=COLS||j>=ROWS) return false; return !solid[j*COLS+i]; }
+function rebuildFillets(){
+  let n=0;
+  for(let j=0;j<ROWS;j++)for(let i=0;i<COLS;i++){
+    if(!solid[j*COLS+i]) continue;
+    for(const sx of [-1,1])for(const sy of [-1,1]){
+      if(n>=FMAX) break;
+      if(isEmptyCell(i+sx,j)&&isEmptyCell(i,j-sy)){
+        _m.compose(_p.set(cellX(i)+sx*CELL/2,cellY(j)+sy*CELL/2,DEPTH/2+.006),_q.identity(),_s.set(sx,sy,1));
+        fillets.setMatrixAt(n++,_m);
+      }
+    }
+  }
+  fillets.count=n; fillets.instanceMatrix.needsUpdate=true;
+}
+let filletDirty=true;
 function removeCell(i,j){
   const k=cidx(i,j); if(!solid[k]) return false;
-  solid[k]=0; _m.makeScale(0,0,0); soil.setMatrixAt(k,_m); soil.instanceMatrix.needsUpdate=true; return true;
+  filletDirty=true; solid[k]=0; _m.makeScale(0,0,0); soil.setMatrixAt(k,_m); soil.instanceMatrix.needsUpdate=true; return true;
 }
 function recolorGrass(season){
   const set=GRASS_SET[season];
@@ -565,20 +597,6 @@ function buildTrim(level){
 for(const [x,w,o] of [[-3.2,.7,.07],[-2.2,.25,.06],[3.8,.5,.05]]){
   const g=new THREE.Mesh(new THREE.PlaneGeometry(w,SOILH*.8),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:o,depthWrite:false}));
   g.position.set(x,-SOILH/2,GZ+.01); g.rotation.z=.5; g.renderOrder=6; world.add(g);
-}
-// sign hanging on the glass
-{
-  const cv=document.createElement('canvas'); cv.width=64; cv.height=20; const cx=cv.getContext('2d');
-  function paintSign(){
-    cx.fillStyle='#9A7B5F'; cx.fillRect(0,0,64,20); cx.fillStyle='#7A5C46'; cx.fillRect(0,0,64,2); cx.fillRect(0,18,64,2);
-    cx.fillStyle='#2B1D17'; cx.font='700 12px Silkscreen, monospace'; cx.textAlign='center'; cx.textBaseline='middle'; cx.fillText('ANTS',32,10.5);
-  }
-  paintSign(); const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace; tex.magFilter=tex.minFilter=THREE.NearestFilter; tex.generateMipmaps=false;
-  if(document.fonts&&document.fonts.load) document.fonts.load('700 12px Silkscreen').then(()=>{paintSign();tex.needsUpdate=true}).catch(()=>{});
-  const plank=new THREE.Mesh(new THREE.PlaneGeometry(1.5,.47),new THREE.MeshBasicMaterial({map:tex}));
-  plank.position.set(1.9,-.75,GZ+.04); world.add(plank);
-  box(1.56,.52,.05,woodMat,1.9,-.75,GZ+.0,world,false);
-  box(.03,.5,.03,woodMat,1.4,-.35,GZ+.03,world,false); box(.03,.5,.03,woodMat,2.4,-.35,GZ+.03,world,false);
 }
 
 /* =====================================================================
@@ -711,6 +729,7 @@ const SEED_CARRY=40; // slots 0..39 carried, 40.. stock
 for(let i=0;i<200;i++) seedInst.setMatrixAt(i,_m);
 
 const A_LEG=.14,B_LEG=.16;
+const _q2=new THREE.Quaternion(),_q3=new THREE.Quaternion(),_Yax=new THREE.Vector3(0,1,0);
 const _f2=new THREE.Vector3(),_u2=new THREE.Vector3(),_l2=new THREE.Vector3();
 const HIP_F=[.08,.02,-.05], FOOT_F=[.17,.04,-.12];
 const _f=new THREE.Vector3(),_u=new THREE.Vector3(),_l=new THREE.Vector3(),_bm=new THREE.Matrix4();
@@ -720,8 +739,8 @@ let antSeq=0;
 function newAnt(nodeId,scale=1){
   const n=NODE[nodeId];
   const a={id:antSeq++,x:n.x+rr(-.15,.15),y:n.y,z:rr(.45,1.1),node:nodeId,route:[],ri:0,plan:[],step:null,
-    tx:1,ty:0,nx:0,ny:1,speed:rr(.62,.85),moving:false,carry:null,anim:null,animT:rr(0,6),wait:0,idleT:rr(.5,3),
-    role:null,legs:[],scale,born:performance.now(),face:null,bob:rr(0,6),lastEdgeFrom:null};
+    tx:1,ty:0,nx:0,ny:1,speed:.75*(.9+Math.random()*.2),moving:false,carry:null,anim:null,animT:rr(0,6),wait:0,idleT:rr(.5,3),
+    role:null,pauseT:0,lookYaw:0,legs:[],scale,born:performance.now(),face:null,bob:rr(0,6),lastEdgeFrom:null};
   for(let i=0;i<6;i++) a.legs.push({p:new THREE.Vector3(),from:new THREE.Vector3(),to:new THREE.Vector3(),t:1,stepping:false});
   ants.push(a); antMesh.count=ants.length*PARTS;
   snapFeet(a); return a;
@@ -764,17 +783,21 @@ function drawAnt(a,slot,dt,time){
   a.animT+=dt*(a.anim?9:4);
   let bob=a.moving?Math.sin(a.bob)*.012:0, headDy=0, headDf=0, abd=0;
   if(a.anim==='tend'||a.anim==='chew'){ headDy=Math.sin(a.animT)*.045-.02; headDf=Math.sin(a.animT*.5)*.03; }
+  else if(a.anim==='idle'){ headDy=Math.sin(a.animT*.5)*.02; }
   else if(a.anim==='dig'){ headDy=-Math.abs(Math.sin(a.animT*1.3))*.07; headDf=Math.abs(Math.sin(a.animT*1.3))*.05; }
   else if(a.anim==='cheer'){ abd=Math.sin(a.animT*1.2)*.07; headDy=Math.abs(Math.sin(a.animT))*.05; }
   if(a.carry==='seedbig'||a.carry==='dead') headDy+=.02;
   _bm.makeBasis(_f,_u,_l); _q.setFromRotationMatrix(_bm);
   const P=_pp.set(a.x,a.y+bob,a.z);
   // abdomen
-  _p.copy(P).addScaledVector(_f,-.12*sc).addScaledVector(_u,(.03+abd)*sc); _s.set(.22*sc,.17*sc,.16*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+2,_m);
+  _p.copy(P).addScaledVector(_f,-.12*sc).addScaledVector(_u,(.03+abd+Math.sin(time*2.6+a.id*1.7)*.02)*sc); _s.set(.22*sc,.17*sc,.16*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+2,_m);
   // thorax
   _p.copy(P).addScaledVector(_u,.0); _s.set(.14*sc,.11*sc,.1*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+1,_m);
-  // head
-  _p.copy(P).addScaledVector(_f,(.2+headDf)*sc).addScaledVector(_u,(.01+headDy)*sc); _s.set(.12*sc,.12*sc,.12*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+0,_m);
+  // head: gentle wobble, antenna touch at the seed, look left/right at the nest entrance
+  const yaw=Math.sin(time*2+a.id)*.08+a.lookYaw;
+  let pitch=0; if(a.anim==='touch') pitch=-.3*Math.sin((1-clamp(a.wait/.5,0,1))*Math.PI);
+  _q2.copy(_q).multiply(_q3.setFromAxisAngle(_Yax,yaw)).multiply(_q3.setFromAxisAngle(_z,pitch));
+  _p.copy(P).addScaledVector(_f,(.2+headDf)*sc).addScaledVector(_u,(.01+headDy)*sc); _s.set(.12*sc,.12*sc,.12*sc); _m.compose(_p,_q2,_s); antMesh.setMatrixAt(base+0,_m);
   // legs (stepping, then IK)
   const v=a.moving?a.speed:0;
   const stepDur=clamp(.13/(1+v*.4),.08,.14);
@@ -864,6 +887,7 @@ function setHeading(a,dx,dy,dt){
   a.nx+=(nx-a.nx)*k; a.ny+=(ny-a.ny)*k; L=Math.hypot(a.nx,a.ny)||1; a.nx/=L; a.ny/=L;
 }
 function updateAnt(a,dt){
+  if(a.pauseT>0){ a.pauseT-=dt; a.moving=false; a.lookYaw=a.pauseT>0?.7*Math.sin((1-a.pauseT)*TAU):0; return; }
   if(!a.step){
     if(a.plan.length){
       a.step=a.plan.shift();
@@ -882,6 +906,7 @@ function updateAnt(a,dt){
       a.x=tn.x;a.y=tn.y;
       if(a.route[a.ri]!==prevId){ const e=edgeBetween(prevId,a.route[a.ri]); if(e){ e.ph=Math.min(1,e.ph+(a.carry?.12:.05)); } }
       a.node=a.route[a.ri]; a.ri++;
+      if(a.node==='s1'&&!a.carry&&a.ri<a.route.length){ a.pauseT=1.0; a.moving=false; return; }
       if(a.ri>=a.route.length){ a.route=[]; a.step=null; a.moving=false; return; }
     } else {
       const dx=(tn.x-a.x)/d, dy=(tn.y-a.y)/d;
@@ -902,6 +927,7 @@ function idleThink(a,dt){
   // keep ants level when resting
   if(a.idleT>0) return;
   a.idleT=rr(1.5,4);
+  if(Math.random()<.7){ setPlan(a,[{wait:rr(1.5,4),anim:'idle'}]); return; }
   const t=Math.random();
   const hr=new Date().getHours();
   const daylight=hr>=7&&hr<18&&weather.rain<.2;
@@ -910,7 +936,7 @@ function idleThink(a,dt){
   if(deadItems.some(d=>!d.claimed)&&t<.6){ goUndertaker(a); return; }
   if(daylight&&t>.93&&F.phase==='none'){ goHaul(a); return; }
   if(t>.35){ wander(a); return; }
-  setPlan(a,[{wait:rr(2,6)}]);
+  setPlan(a,[{wait:rr(2,6),anim:'idle'}]);
 }
 function wander(a){
   const steps=[]; let cur=a.node; let prev=null;
@@ -963,7 +989,8 @@ function decayPheromone(dt){ for(const e of EDGES){ if(!e.built) continue; e.ph=
 /* =====================================================================
    10. colony economy: brood, dig jobs, stock, dead ants
    ===================================================================== */
-const colony={food:0,glass:0,start:Date.now(),trips:0,seasonMode:-1};
+const colony={food:0,glass:0,start:Date.now(),trips:0,seasonMode:-1,today:0,todayKey:''};
+function todayTrips(){ const k=new Date().toDateString(); if(colony.todayKey!==k){colony.todayKey=k;colony.today=0;} return colony.today; }
 const CAPS=[20,30,40,50];
 const CASE_COST=[3,5,8];
 const brood=[]; // {stage,t,mesh,x,y,slot}
@@ -1108,6 +1135,7 @@ seedMesh.visible=false; world.add(seedMesh);
 const seedHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex(),color:0xFFD07A,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
 seedHalo.scale.setScalar(1.8); world.add(seedHalo);
 const seedLight=new THREE.PointLight(0xFFD07A,0,4.5,1.5); world.add(seedLight);
+const motes=[0,1].map(()=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.06),new THREE.MeshBasicMaterial({color:0xFFE9A8,transparent:true,depthWrite:false})); m.visible=false; world.add(m); return m; });
 const seedPos=new THREE.Vector3(NODE[FOR_NODE].x,.22,.85);
 function setBtn(){
   const b=$('go');
@@ -1131,7 +1159,7 @@ function dispatch(){
   const sp=NODE[FOR_NODE];
   F.foragers.forEach((a,i)=>{
     const side=i%2?1:-1, off=side*(.28+Math.floor(i/2)*.22);
-    setPlan(a,[{wait:i*.8+rr(0,.3)},{go:FOR_NODE},{moveTo:{x:sp.x+off,y:.17}},{fn:x=>{x.arrived=true}},{wait:Infinity,anim:'chew',face:{x:seedPos.x,y:seedPos.y}}]);
+    setPlan(a,[{wait:i*.8+rr(0,.3)},{go:FOR_NODE},{moveTo:{x:sp.x+off,y:.17}},{fn:x=>{x.arrived=true}},{wait:.5,anim:'touch',face:{x:seedPos.x,y:seedPos.y}},{wait:Infinity,anim:'chew',face:{x:seedPos.x,y:seedPos.y}}]);
     a.arrived=false; a.role='forager';
   });
   log(`${F.foragers.length} foragers leave the nest.`);
@@ -1142,7 +1170,7 @@ function startFocus(){
 }
 function toggleGo(){
   if(F.phase==='none'||F.phase==='done'){
-    const t=$('task').value.trim();
+    const t=taskText();
     if(!t){ const i=$('task'); i.classList.remove('shake'); void i.offsetWidth; i.classList.add('shake'); i.focus(); return; }
     dropSeed(t); startFocus(); return;
   }
@@ -1168,7 +1196,7 @@ function completeTrip(){
 }
 function deliver(){
   const dest=deepest();
-  colony.food+=1; colony.trips++; addStock(dest,1,false); dest.glow=1;
+  colony.food+=1; colony.trips++; todayTrips(); colony.today++; addStock(dest,1,false); dest.glow=1;
   F.carrier&&(F.carrier.carry=null); F.carrier=null;
   seedMesh.visible=false; seedHalo.material.opacity=0; seedLight.intensity=0;
   F.phase='done'; F.doneT=0;
@@ -1186,7 +1214,7 @@ function updateFocus(dt){
       if(F.left<=0){ F.left=0; completeTrip(); }
     } else if(!F.running||document.hidden){
       if(F.foragers.some(a=>a.arrived)||true) F.bright-=dt/90;
-      if(F.bright<.35){ abandon('The seed dimmed too far. The colony heads home, empty-handed. No harm done.'); }
+      if(F.bright<.2){ abandon('The seed dimmed too far. The colony heads home, empty-handed. No harm done.'); }
     }
   }
   if(F.phase==='carry'&&F.carrier){
@@ -1196,11 +1224,16 @@ function updateFocus(dt){
   if(F.phase==='abandon'){ F.doneT+=dt; F.bright=Math.max(0,F.bright-dt*.35); if(F.doneT>4){ F.phase='none'; seedMesh.visible=false; F.foragers.forEach(a=>{a.role=null}); F.foragers=[]; setBtn(); } }
   if(F.phase==='done'){ F.doneT+=dt; if(F.doneT>4){ F.phase='none'; F.foragers.forEach(a=>a.role=null); F.foragers=[]; setBtn(); } }
   // visuals
+  if(!seedMesh.visible) motes.forEach(m=>m.visible=false);
   if(seedMesh.visible){
     const b=F.bright, pulse=.9+Math.sin(performance.now()/260)*.1;
     seedMesh.position.copy(seedPos);
     seedMesh.material.color.setHex(0x5A3A2A).lerp(col('#FFD07A'),b);
-    seedMesh.scale.setScalar(F.phase==='carry'?.7:1);
+    const tt=performance.now()/1000, pulse2=1+.15*(.5-.5*Math.cos(Math.PI*tt));   // 1.0 -> 1.15 -> 1.0, 2s loop
+    seedMesh.scale.setScalar((F.phase==='carry'?.7:1)*pulse2);
+    motes.forEach((m,k)=>{ const ang=tt*(1.1+.4*k)+k*Math.PI, r=.45+.08*k;
+      m.position.set(seedPos.x+Math.cos(ang)*r,seedPos.y+.1+Math.sin(tt*1.7+k)*.18,seedPos.z+Math.sin(ang)*r*.6);
+      m.visible=b>.25&&Math.sin(tt*9+k*2)>-.5; m.scale.setScalar(.6+b*.6); });
     seedMesh.rotation.y+=dt*.8;
     seedHalo.position.copy(seedPos); seedHalo.material.opacity=b*.8*pulse; seedHalo.scale.setScalar(1.4+b*.8);
     seedLight.position.copy(seedPos); seedLight.position.y+=.3; seedLight.position.z+=.4; seedLight.intensity=b*3*pulse;
@@ -1371,7 +1404,7 @@ const pad3=n=>String(Math.min(999,n)).padStart(3,'0');
 function refreshUI(){
   $('sFood').textContent=pad3(colony.food);
   $('sWork').textContent=pad3(ants.length);
-  $('sCham').innerHTML=builtChambers().length+'<small>/'+CH.length+'</small>';
+  $('sToday').textContent=pad3(todayTrips());
   const m=Math.floor(Math.max(0,F.left)/60), s=Math.floor(Math.max(0,F.left)%60);
   $('timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
   $('sub').textContent=`DAY ${colonyDay()+1} · ${SEASONS[seasonShown()]}`;
@@ -1392,7 +1425,12 @@ $('bDig').onclick=()=>{ const ns=nextSlot(); if(ns) startDig(ns); };
 $('bCase').onclick=()=>{ const c=CASE_COST[colony.glass]; if(colony.glass>=3||colony.food<c) return; colony.food-=c; colony.glass++; buildTrim(colony.glass); log(`Glass case upgraded. Colony cap is now ${workerCap()}.`); refreshUI(); save(); };
 $('go').onclick=toggleGo;
 $('letgo').onclick=()=>abandon();
-$('task').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const t=$('task').value.trim(); if(!t){return;} if(F.phase==='none'||F.phase==='done'){ dropSeed(t); } e.target.blur(); } });
+function taskText(){ return ($('task').textContent||'').replace(/\s+/g,' ').trim(); }
+$('task').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ e.preventDefault(); const t=taskText(); if(!t) return; if(F.phase==='none'||F.phase==='done'){ dropSeed(t); } e.target.blur(); }
+  else if(e.key.length===1&&!e.metaKey&&!e.ctrlKey&&taskText().length>=40) e.preventDefault();
+});
+$('task').addEventListener('paste',e=>{ e.preventDefault(); const t=((e.clipboardData||window.clipboardData).getData('text')||'').replace(/\s+/g,' ').slice(0,40); document.execCommand('insertText',false,t); });
 $('theme').onclick=()=>{ const d=document.body.dataset.theme==='dark'?'light':'dark'; document.body.dataset.theme=d; save(); };
 $('season').onclick=()=>{ colony.seasonMode=colony.seasonMode>=3?-1:colony.seasonMode+1; applySeason(); save(); };
 $('cardX').onclick=()=>$('card').classList.remove('on');
@@ -1407,14 +1445,14 @@ document.addEventListener('visibilitychange',()=>{
 // persistence (best effort)
 const KEY='antNestFocus.v1';
 function save(){
-  try{ localStorage.setItem(KEY,JSON.stringify({food:colony.food,glass:colony.glass,start:colony.start,trips:colony.trips,
+  try{ localStorage.setItem(KEY,JSON.stringify({food:colony.food,glass:colony.glass,start:colony.start,trips:colony.trips,today:colony.today,todayKey:colony.todayKey,
     seasonMode:colony.seasonMode,workers:ants.length,built:CH.filter(c=>c.built&&c.from).map(c=>c.id),theme:document.body.dataset.theme,
     stock:CH.map(c=>c.stock||0)})); }catch(e){}
 }
 function load(){
   let d=null; try{ d=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){}
   if(!d) return false;
-  colony.food=d.food|0; colony.glass=clamp(d.glass|0,0,3); colony.start=d.start||Date.now(); colony.trips=d.trips|0; colony.seasonMode=(d.seasonMode===undefined?-1:d.seasonMode);
+  colony.food=d.food|0; colony.glass=clamp(d.glass|0,0,3); colony.start=d.start||Date.now(); colony.trips=d.trips|0; colony.today=d.today|0; colony.todayKey=d.todayKey||''; colony.seasonMode=(d.seasonMode===undefined?-1:d.seasonMode);
   if(d.theme) document.body.dataset.theme=d.theme;
   // rebuild dug chambers instantly
   for(const id of (d.built||[])){
@@ -1482,6 +1520,7 @@ function frame(nowMs){
   // island float, snapped to ~1 render pixel
   const px=(viewH/camera.zoom)/rtH;
   world.position.y=Math.round(Math.sin(now*.6)*.09/px)*px;
+  if(filletDirty){ rebuildFillets(); filletDirty=false; }
   updateWeather(dt,now);
   updateSky();
   for(const a of ants) updateAnt(a,dt);
@@ -1508,6 +1547,7 @@ function frame(nowMs){
   clock.dotT+=dt; if(clock.dotT>.3){ clock.dotT=0; updateDots(); }
   clock.uiT+=dt; if(clock.uiT>.25){ clock.uiT=0; refreshUI(); }
   clock.saveT+=dt; if(clock.saveT>20){ clock.saveT=0; save(); }
+  { const ts=toScreen(1.9,.5,GZ); $('taskSign').style.transform=`translate(${Math.round(ts[0])}px,${Math.round(ts[1])}px) translate(-50%,0)`; }
   // seed label
   const lab=$('seedLabel');
   if(seedMesh.visible&&F.phase!=='done'&&(document.body.classList.contains('show-ui')||!matchMedia('(orientation:landscape) and (max-height:520px)').matches)){

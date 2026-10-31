@@ -114,7 +114,7 @@ details>summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body data-theme="dark">
-<canvas id="view" aria-label="Pixel-art ant farm on a floating island"></canvas>
+<canvas id="view" aria-label="Pixel-art ant farm in a rainforest glass tank"></canvas>
 
 <div class="seedlabel" id="seedLabel"><span id="seedText"></span><i><b id="seedBar"></b></i></div>
 
@@ -195,7 +195,7 @@ const col=h=>new THREE.Color(h);
    ===================================================================== */
 const PALETTE=[
 '#F5F1E8','#E6D5C3','#C67B5C','#8B5A3C','#5A3A2A','#1A1A1A','#7BAE7F','#5A8A6E','#4A7DE2','#D9E76C','#FFD07A','#FF6B6B',
-'#FBE9C6','#D4BC9C','#B89B7E','#9A7B5F','#7A5C46','#3E2A20','#2B1D17','#120D0B',
+'#FBE9C6','#D4BC9C','#B89B7E','#9A7B5F','#7A5C46','#3E2A20','#2B1D17','#070504',
 '#E39A78','#A8603F','#6F4128','#4A2B1E',
 '#F0E2CF','#BFA17E',
 '#B5D99C','#98C88F','#6E9E5E','#4E7A52','#3C6046','#2B4634','#1E3226',
@@ -238,7 +238,7 @@ scene.add(camera);
 const world=new THREE.Group(); scene.add(world);
 
 const ELEV=31*Math.PI/180, AZ0=Math.PI/4, CAM_DIST=70;
-const target0=new THREE.Vector3(0,-2.7,0);
+const target0=new THREE.Vector3(0,-1.3,0);
 const ZOOM0=innerWidth>=innerHeight?1.25:1;
 const POLAR=Math.PI/2-ELEV;
 
@@ -469,7 +469,7 @@ function cellsEllipse(cx,cy,rx,ry){
    5. island geometry (instanced soil cross-section, rock, crystal, glass)
    ===================================================================== */
 const SEASONS=['SPRING','SUMMER','AUTUMN','WINTER'];
-const GRASS_SET=[['#98C88F','#7BAE7F'],['#7BAE7F','#5A8A6E'],['#8FA03A','#C2D14F','#E8A93C'],['#C9C6C0','#F5F1E8','#9A978F']];
+const GRASS_SET=[['#6E9E5E','#4E7A52','#98C88F'],['#4E7A52','#3C6046','#6E9E5E'],['#6E9E5E','#8FA03A','#4E7A52'],['#4E7A52','#5A8A6E','#3C6046']];
 function layerColor(i,j){
   const wob=Math.round((Math.sin(i*.185)*.9+Math.sin(i*.45+2)*.6)*2);
   const jj=j-wob;
@@ -490,7 +490,7 @@ const grassCells=[];
 for(let j=0;j<ROWS;j++)for(let i=0;i<COLS;i++){
   const k=cidx(i,j);
   _m.makeTranslation(cellX(i),cellY(j),0); soil.setMatrixAt(k,_m);
-  if(j===0){ grassCells.push(k); _c.set('#7BAE7F'); }
+  if(j===0){ grassCells.push(k); _c.set('#4E7A52'); }
   else _c.set(layerColor(i,j));
   const v=.92+R()*.14; _c.multiplyScalar(v);
   soil.setColorAt(k,_c);
@@ -574,48 +574,23 @@ for(const c of CH){
 const backWall=new THREE.Mesh(new THREE.PlaneGeometry(COLS*CELL,SOILH),new THREE.MeshLambertMaterial({color:0x6F4128}));
 backWall.position.set(0,-SOILH/2,-DEPTH/2+.05); backWall.receiveShadow=true; world.add(backWall);
 
-// ragged rounded-rectangle rock layers
-function raggedShape(hx,hz,seed,jit){
-  const rnd=mulberry32(seed), pts=[], N=56, n=4.5;
-  for(let k=0;k<N;k++){
-    const a=k/N*TAU, ca=Math.cos(a), sa=Math.sin(a);
-    const r=Math.pow(Math.pow(Math.abs(ca),n)+Math.pow(Math.abs(sa),n),-1/n);
-    const j=1-rnd()*jit;
-    pts.push(new THREE.Vector2(ca*r*hx*j, sa*r*hz*j));
-  }
-  return new THREE.Shape(pts);
-}
-const rockCols=['#7A5C46','#6B6962','#454340','#6B6962','#454340'];
-for(let k=0;k<5;k++){
-  const hx=7.05*(1-.115*k)-0.1, hz=(DEPTH/2)*(1-.13*k)+.02;
-  const geo=new THREE.ExtrudeGeometry(raggedShape(hx,hz,900+k*13,k===0?.04:.2),{depth:.56,bevelEnabled:false,steps:1});
-  geo.rotateX(-Math.PI/2);
-  const mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:rockCols[k],flatShading:true}));
-  mesh.position.y=-SOILH-.56*(k+1); mesh.castShadow=true; mesh.receiveShadow=true;
-  world.add(mesh);
-}
-// crystals
-const crystalMat=new THREE.MeshLambertMaterial({color:0x54D1C6,emissive:0x2E9BA0,emissiveIntensity:.9,flatShading:true});
-const crystals=new THREE.Group(); world.add(crystals);
-for(let k=0;k<8;k++){
-  const h=.9+R()*1.1, r=.16+R()*.14;
-  const g=new THREE.ConeGeometry(r,h,4); g.rotateX(Math.PI);
-  const m=new THREE.Mesh(g,crystalMat);
-  m.position.set((R()-.5)*3.2,-SOILH-.56*5-h/2+.15,(R()-.5)*.9); m.rotation.y=R()*3; m.rotation.z=(R()-.5)*.35;
-  m.castShadow=true; crystals.add(m);
-}
-const crystalLight=new THREE.PointLight(0x54D1C6,6,9,1.6); crystalLight.position.set(0,-SOILH-3.6,.6); world.add(crystalLight);
-
 // glass front + frame
-const GZ=DEPTH/2+.06;
-const glassMat=new THREE.MeshBasicMaterial({color:0xBFE3F5,transparent:true,opacity:.1,depthWrite:false});
-const glass=new THREE.Mesh(new THREE.PlaneGeometry(COLS*CELL+.1,SOILH+.5),glassMat);
-glass.position.set(0,-SOILH/2+.25,GZ); glass.renderOrder=5; world.add(glass);
+const GZ=DEPTH/2+.06, TANKH=3.4, TW=COLS*CELL, TH=SOILH+TANKH, TCY=(TANKH-SOILH)/2;
+const glassMat=new THREE.MeshBasicMaterial({color:0xBFE3F5,transparent:true,opacity:.1,depthWrite:false,side:THREE.DoubleSide});
+function glassPane(w,h,x,y,z,ry,rx){ const g=new THREE.Mesh(new THREE.PlaneGeometry(w,h),glassMat); g.position.set(x,y,z); g.rotation.set(rx||0,ry||0,0); g.renderOrder=5; world.add(g); return g; }
+glassPane(TW+.1,TH,0,TCY,GZ); glassPane(TW+.1,TH,0,TCY,-GZ);
+glassPane(DEPTH+.12,TH,-(TW/2+.06),TCY,0,Math.PI/2); glassPane(DEPTH+.12,TH,(TW/2+.06),TCY,0,Math.PI/2);
+glassPane(TW+.1,DEPTH+.12,0,TANKH,0,0,-Math.PI/2);
 const woodMat=new THREE.MeshLambertMaterial({color:0x5A3A2A});
+const frameMat=new THREE.MeshLambertMaterial({color:0x1A1A1A});
 function box(w,h,d,mat,x,y,z,parent=world,shadow=true){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=shadow;m.receiveShadow=true;parent.add(m);return m}
-box(.16,SOILH+.5,.16,woodMat,-COLS*CELL/2-.08,-SOILH/2+.25,GZ+.02);
-box(.16,SOILH+.5,.16,woodMat, COLS*CELL/2+.08,-SOILH/2+.25,GZ+.02);
-box(COLS*CELL+.4,.16,.16,woodMat,0,-SOILH-.08,GZ+.02);
+{
+  const fx=TW/2+.08, fz=GZ+.02;
+  for(const sx of [-1,1]) for(const sz of [-1,1]) box(.16,TH+.2,.16,frameMat,sx*fx,TCY,sz*fz);
+  for(const sz of [-1,1]){ box(TW+.4,.16,.16,frameMat,0,-SOILH-.08,sz*fz); box(TW+.4,.16,.16,frameMat,0,TANKH+.08,sz*fz); }
+  for(const sx of [-1,1]){ box(.16,.16,DEPTH+.3,frameMat,sx*fx,-SOILH-.08,0); box(.16,.16,DEPTH+.3,frameMat,sx*fx,TANKH+.08,0); }
+  box(TW+.5,.3,DEPTH+.5,frameMat,0,-SOILH-.3,0);   // base tray
+}
 const brassMat=new THREE.MeshLambertMaterial({color:0xE8A93C,emissive:0x3a2208});
 const trim=new THREE.Group(); world.add(trim);
 function buildTrim(level){
@@ -653,6 +628,43 @@ function makeTree(x,z,scale,seed){
   trees.push(t); return t;
 }
 makeTree(-6.0,-.7,1.0,5); makeTree(6.4,-.9,1.15,9); makeTree(.6,-1.05,.7,3);
+trees.forEach(t=>t.g.visible=false);
+// rainforest vivarium dressing: moss, ferns, broadleaf plants, driftwood, vines (all static)
+{
+  const rnd=mulberry32(808), foliage=[];
+  const greens=[0x4E7A52,0x3C6046,0x6E9E5E,0x98C88F,0x2B4634];
+  for(let k=0;k<120;k++){ const x=(rnd()-.5)*13.6, z=(rnd()-.5)*2.7, h=.05+rnd()*.07, w=.18+rnd()*.3;
+    foliage.push([x,h/2,z,0,rnd()*3,0,w,h,w*(.7+rnd()*.6),[0x3C6046,0x4E7A52,0x6E9E5E,0x2B4634][Math.floor(rnd()*4)]]); }
+  for(const [fx,fz,sc] of [[-6.3,-.6,1.1],[-5.2,-1.0,.8],[6.2,-.7,1.2],[5.3,-1.0,.8],[-.6,-1.1,.9],[1.6,-1.15,.7]]){
+    for(let k=0;k<8;k++){ const a=k/8*TAU+rnd()*.4, len=(.55+rnd()*.35)*sc, tilt=.55+rnd()*.35;
+      foliage.push([fx+Math.cos(a)*len*.45*Math.cos(tilt),.1+Math.sin(tilt)*len*.45,fz+Math.sin(a)*len*.45*Math.cos(tilt),0,-a,tilt,len,.025,.12*sc,greens[Math.floor(rnd()*4)]]); }
+  }
+  for(const [fx,fz] of [[-3.9,-.9],[3.4,-1.0],[-1.8,-1.1]]){
+    for(let k=0;k<5;k++){ const a=rnd()*TAU, tilt=.3+rnd()*.5, L=.45+rnd()*.3;
+      foliage.push([fx+Math.cos(a)*.18,.18+L*.4,fz+Math.sin(a)*.18,0,-a,tilt,L,.02,L*.55,[0x4E7A52,0x6E9E5E,0x3C6046][k%3]]); }
+  }
+  const fm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide}),foliage.length);
+  foliage.forEach((f,i)=>{ _q.setFromEuler(new THREE.Euler(f[3],f[4],f[5])); _m.compose(_p.set(f[0],f[1],f[2]),_q,_s.set(f[6],f[7],f[8])); fm.setMatrixAt(i,_m); _c.set(f[9]); fm.setColorAt(i,_c); });
+  fm.castShadow=true; fm.receiveShadow=true; fm.frustumCulled=false; world.add(fm);
+  // driftwood branches, a fallen log, hanging vines
+  const zA=new THREE.Vector3(0,0,1);
+  const wood=(a,b,th,mat)=>{ const d=new THREE.Vector3().subVectors(b,a), L=d.length(); const m=new THREE.Mesh(new THREE.BoxGeometry(th,th,L),mat);
+    m.position.copy(a).add(b).multiplyScalar(.5); m.quaternion.setFromUnitVectors(zA,d.normalize()); m.castShadow=true; m.receiveShadow=true; world.add(m); return m; };
+  const wm1=new THREE.MeshLambertMaterial({color:0x5A3A2A}), wm2=new THREE.MeshLambertMaterial({color:0x7A5C46}), vm=new THREE.MeshLambertMaterial({color:0x4E7A52});
+  const path=[[-6.9,2.6,-.9],[-5.6,2.9,-.95],[-4.2,2.6,-1.0],[-2.9,2.2,-.95],[-1.7,2.3,-.9]];
+  for(let i=0;i<path.length-1;i++) wood(new THREE.Vector3(...path[i]),new THREE.Vector3(...path[i+1]),.24-i*.03,i%2?wm1:wm2);
+  const path2=[[6.9,.3,-1.0],[5.8,1.3,-.9],[4.5,2.1,-.95],[3.1,2.5,-1.0]];
+  for(let i=0;i<path2.length-1;i++) wood(new THREE.Vector3(...path2[i]),new THREE.Vector3(...path2[i+1]),.26-i*.04,i%2?wm2:wm1);
+  wood(new THREE.Vector3(-5.2,2.9,-.95),new THREE.Vector3(-5.0,1.6,-.9),.1,wm1);
+  wood(new THREE.Vector3(-3.4,.14,-.6),new THREE.Vector3(-.9,.17,-.5),.3,wm1);
+  for(const [vx,vy,vz,vl] of [[-4.9,2.7,-.9,1.3],[-3.4,2.4,-.95,1.0],[4.6,2.1,-.95,1.1],[-6.2,2.8,-.9,.9],[3.6,2.4,-1.0,.8]]){
+    let cx=vx,cy=vy; for(let k=0;k<3;k++){ const nx=cx+(rnd()-.5)*.12, ny=cy-vl/3; wood(new THREE.Vector3(cx,cy,vz),new THREE.Vector3(nx,ny,vz),.035,vm); cx=nx; cy=ny; }
+  }
+}
+// soft light shafts from the lid
+const beams=[[-4.2,.14,1.8],[-.6,-.1,2.4],[3.6,.12,1.6]].map(([x,rz,w])=>{
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,TANKH+.4),new THREE.MeshBasicMaterial({color:0xFFE6BE,transparent:true,opacity:.05,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+  m.position.set(x,TANKH/2,0); m.rotation.z=rz; m.renderOrder=3; world.add(m); return m; });
 function applySeasonTrees(){
   const frac=[.85,1,.78,.14][season];
   const colr=['#98C88F','#6E9E5E','#F08A4B','#9A978F'][season];
@@ -671,15 +683,14 @@ for(let i=0;i<tuftN;i++){ tuftData.push({x:(R()-.5)*13.4,z:(R()-.5)*2.6,ph:R()*6
 world.add(tuft);
 // foraging ground + pebbles
 {
-  const patch=box(2.3,.05,2.0,new THREE.MeshLambertMaterial({color:0xD4BC9C}),4.8,.01,.0,world,false);
+  const patch=box(2.3,.05,2.0,new THREE.MeshLambertMaterial({color:0x6B6962}),4.8,.01,.0,world,false);
   const pm=new THREE.MeshLambertMaterial({color:0x9A978F});
   [[4.0,.1,.9],[5.7,.1,-.6],[4.5,.1,-.7],[5.4,.1,.8]].forEach(p=>box(.14,.1,.12,pm,p[0],p[1]-.02,p[2]));
 }
 // floodlight on a pole (night)
 const lampHead=new THREE.Mesh(new THREE.BoxGeometry(.3,.16,.22),new THREE.MeshBasicMaterial({color:0x3E2A20}));
 {
-  box(.1,2.2,.1,woodMat,3.2,1.1,-1.0);
-  lampHead.position.set(3.35,2.2,-1.0); world.add(lampHead);
+  lampHead.visible=false;
 }
 const flood=new THREE.SpotLight(0xFFD07A,0,12,.75,.5,1.2); flood.position.set(3.35,2.1,-1.0); flood.target.position.set(4.8,0,.4); world.add(flood,flood.target);
 // refuse pile spot (dead ants end up here)
@@ -690,9 +701,9 @@ const leafMat=new THREE.MeshLambertMaterial({color:0x4E7A52,side:THREE.DoubleSid
 const leaf=new THREE.Mesh(new THREE.PlaneGeometry(1.7,1.2),leafMat); leaf.rotation.x=-Math.PI/2+.25; leaf.castShadow=true; leafGroup.add(leaf);
 const leafVein=box(1.6,.03,.04,new THREE.MeshLambertMaterial({color:0x3C6046}),0,.0,0,leafGroup,false);
 const rope1=box(1,.03,.03,woodMat,0,0,0,world,false), rope2=box(1,.03,.03,woodMat,0,0,0,world,false);
-rope1.visible=rope2.visible=false;
+rope1.visible=rope2.visible=false; leafGroup.visible=false;
 const awning={x:-5.2,k:0};      // k 0=stowed, 1=deployed
-for(const dx of [-.8,.8]) box(.05,.75,.05,woodMat,-2.5+dx,.37,-.3,world,false).visible=true;
+for(const dx of [-.8,.8]) box(.05,.75,.05,woodMat,-2.5+dx,.37,-.3,world,false).visible=false;
 // groundsmen
 function makeMan(shirt,hat){
   const g=new THREE.Group();
@@ -714,7 +725,7 @@ sun.shadow.mapSize.set(1024,1024); sun.shadow.bias=-.0006; sun.shadow.normalBias
 const sc=sun.shadow.camera; sc.left=-13;sc.right=13;sc.top=13;sc.bottom=-13;sc.near=1;sc.far=90;
 scene.add(sun,sun.target); sun.target.position.set(0,-3,0);
 // the one warm lamp above the tank: hard shadows, soft pool of light
-const keyLamp=new THREE.SpotLight(0xFFE6BE,85,0,.62,.9,1); keyLamp.position.set(0,17,11); keyLamp.target.position.set(0,-2.6,0);
+const keyLamp=new THREE.SpotLight(0xFFE6BE,85,0,.5,.85,1); keyLamp.position.set(0,17,11); keyLamp.target.position.set(0,-1.2,0);
 keyLamp.castShadow=true; keyLamp.shadow.mapSize.set(2048,2048); keyLamp.shadow.bias=-.0004; keyLamp.shadow.normalBias=.03;
 keyLamp.shadow.camera.near=4; keyLamp.shadow.camera.far=60; scene.add(keyLamp,keyLamp.target);
 const hemi=new THREE.HemisphereLight(0xBFD8FF,0x8B5A3C,1.5); scene.add(hemi);
@@ -1203,7 +1214,7 @@ function setBtn(){
 }
 function dropSeed(text){
   F.task=text; F.phase='seed'; F.left=F.total; F.bright=1; F.running=false; F.landT=0; F.foragers=[]; F.carrier=null;
-  seedMesh.visible=true; seedMesh.scale.setScalar(1); seedPos.set(NODE[FOR_NODE].x,7,.85);
+  seedMesh.visible=true; seedMesh.scale.setScalar(1); seedPos.set(NODE[FOR_NODE].x,2.9,.85);
   $('seedText').textContent=text.toUpperCase();
   log(`Seed dropped: "${text}"`); setBtn(); refreshUI();
 }
@@ -1262,7 +1273,7 @@ function focusActive(){return F.running&&!document.hidden}
 function updateFocus(dt){
   // seed physics
   if(F.phase!=='none'&&F.phase!=='done'||seedMesh.visible){
-    if(seedPos.y>.17&&F.phase!=='carry'){ F.landT+=dt; seedPos.y=Math.max(.17,7-9*F.landT*F.landT*1.2); if(seedPos.y<=.17){ seedPos.y=.17; } }
+    if(seedPos.y>.17&&F.phase!=='carry'){ F.landT+=dt; seedPos.y=Math.max(.17,2.9-9*F.landT*F.landT*1.2); if(seedPos.y<=.17){ seedPos.y=.17; } }
   }
   if(F.phase==='out'){
     if(focusActive()){
@@ -1299,7 +1310,7 @@ function updateFocus(dt){
 /* =====================================================================
    12. weather, wind, butterflies, fireflies, groundsmen
    ===================================================================== */
-const weather={rain:0,rainTarget:0,rainNext:performance.now()/1000+rr(150,260),rainEnd:0,wind:0,windT:0,windNext:performance.now()/1000+rr(50,100),windLeft:0};
+const weather={rain:0,rainTarget:0,rainNext:1e12,rainEnd:0,wind:0,windT:0,windNext:1e12,windLeft:0};
 const dropN=170, drops=new THREE.InstancedMesh(new THREE.BoxGeometry(.035,.4,.035),new THREE.MeshBasicMaterial({color:0xA9C7F0,transparent:true,opacity:.85,depthWrite:false}),dropN);
 drops.frustumCulled=false; scene.add(drops);
 const dropData=[]; for(let i=0;i<dropN;i++) dropData.push({x:rr(-8,8),z:rr(-3,3),y:rr(0,10),v:rr(12,16)});
@@ -1379,13 +1390,13 @@ function updateWeather(dt,now){
   tuft.instanceMatrix.needsUpdate=true;
   // butterflies (daytime, occasionally)
   const hr=hourNow();
-  if(hr>8&&hr<17&&weather.rain<.1&&flies.length<2&&Math.random()<dt*.04) spawnButterfly();
+  if(false&&hr>8&&hr<17&&weather.rain<.1&&flies.length<2&&Math.random()<dt*.04) spawnButterfly();
   for(let i=flies.length-1;i>=0;i--){ const g=flies[i], d=g.userData; d.t+=dt;
     const x=-8*d.dir+d.dir*d.t*1.1; g.position.set(x,d.y+Math.sin(d.t*1.7+d.ph)*.4,d.z+Math.sin(d.t*.9)*.4);
     const fl=Math.sin(d.t*22)*.9; d.pv1.rotation.z=fl; d.pv2.rotation.z=-fl; g.rotation.y=d.dir>0?0:Math.PI;
     if(Math.abs(x)>8.5){ world.remove(g); flies.splice(i,1); } }
   // fireflies (night only)
-  fireflies.visible=nightF>.45;
+  fireflies.visible=false;
   if(fireflies.visible){
     for(let i=0;i<ffN;i++){ const f=ffData[i];
       const x=f.x+Math.sin(now*f.sp+f.ph)*.6, y=f.y+Math.sin(now*f.sp*1.7+f.ph)*.25, z=f.z+Math.cos(now*f.sp*.8+f.ph)*.4;
@@ -1400,9 +1411,9 @@ function updateWeather(dt,now){
    ===================================================================== */
 let hourOverride=null;
 function hourNow(){ if(hourOverride!==null) return hourOverride; const d=new Date(); return d.getHours()+d.getMinutes()/60+d.getSeconds()/3600; }
-const cNightBg=col('#120D0B'), cDayBg=col('#3E2A20'), cDuskBg=col('#4A2B1E'), cLampNight=col('#FFB070'), cLampDay=col('#FFE6BE'), cDusk1=col('#8E6BB8'), cDusk2=col('#F08A4B'), cRain=col('#9A978F');
+const cNightBg=col('#050403'), cDayBg=col('#050403'), cDuskBg=col('#050403'), cLampNight=col('#FFB070'), cLampDay=col('#FFE6BE'), cDusk1=col('#8E6BB8'), cDusk2=col('#F08A4B'), cRain=col('#9A978F');
 const cSunDay=col('#FFF1D0'), cSunDusk=col('#FFB070'), cMoon=col('#7C97E8');
-const cHSkyD=col('#D9C4A8'), cHSkyN=col('#3A4A8C'), cHGrD=col('#3E2A20'), cHGrN=col('#1A1A1A');
+const cHSkyD=col('#B5D99C'), cHSkyN=col('#3A4A8C'), cHGrD=col('#2B4634'), cHGrN=col('#1A1A1A');
 const bgNow=scene.background, tmpC=new THREE.Color();
 const cCloudDay=col('#F5F1E8'), cCloudDusk=col('#FFB070'), cCloudNight=col('#2E4A8C');
 function updateSky(){
@@ -1418,10 +1429,10 @@ function updateSky(){
   hemi.color.copy(cHSkyN).lerp(cHSkyD,dayF); hemi.groundColor.copy(cHGrN).lerp(cHGrD,dayF);
   hemi.intensity=lerp(.5,.8,dayF);
   starMat.opacity=0;
+  { const tn=performance.now()/1000; beams.forEach((m,k)=>{ m.material.opacity=(.045+.015*Math.sin(tn*.4+k*2))*lerp(.5,1,dayF); }); }
   // artificial light
   const lamp=smooth(.2,.8,nightF);
-  flood.intensity=lamp*28; (lampHead.material).color.setHex(lamp>.3?0xFFD07A:0x3E2A20);
-  crystalLight.intensity=lerp(3,8,nightF);
+  flood.intensity=0; (lampHead.material).color.setHex(lamp>.3?0xFFD07A:0x3E2A20);
   for(const c of CH){
     const on=c.built?1:0, base=lerp(1.4,3.4,nightF);
     c.lit+=((on)-c.lit)*.05; if(c.clutter) c.clutter.visible=!!c.built;
@@ -1570,7 +1581,7 @@ function frame(nowMs){
   stepSnap(dt); controls.update(); clampPan();
   // island float, snapped to ~1 render pixel
   const px=(viewH/camera.zoom)/rtH;
-  world.position.y=Math.round(Math.sin(now*.6)*.09/px)*px;
+  world.position.y=0;
   if(filletDirty){ rebuildFillets(); filletDirty=false; }
   updateWeather(dt,now);
   updateSky();
@@ -1598,7 +1609,7 @@ function frame(nowMs){
   clock.dotT+=dt; if(clock.dotT>.3){ clock.dotT=0; updateDots(); }
   clock.uiT+=dt; if(clock.uiT>.25){ clock.uiT=0; refreshUI(); }
   clock.saveT+=dt; if(clock.saveT>20){ clock.saveT=0; save(); }
-  { const ts=toScreen(1.9,.5,GZ); $('taskSign').style.transform=`translate(${Math.round(ts[0])}px,${Math.round(ts[1])}px) translate(-50%,0)`; }
+  { const ts=toScreen(1.9,TANKH+.1,GZ); $('taskSign').style.transform=`translate(${Math.round(ts[0])}px,${Math.round(ts[1])}px) translate(-50%,0)`; }
   // seed label
   const lab=$('seedLabel');
   if(seedMesh.visible&&F.phase!=='done'&&(document.body.classList.contains('show-ui')||!matchMedia('(orientation:landscape) and (max-height:520px)').matches)){

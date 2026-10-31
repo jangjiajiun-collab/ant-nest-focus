@@ -122,7 +122,7 @@ details>summary::-webkit-details-marker{display:none}
   <header class="title halo">
     <h1>ANT NEST<br>FOCUS</h1>
     <p>FEED</p>
-    <div class="timer"><b id="timer">25:00</b><small id="sub">DAY 1 · SPRING</small></div>
+    <div class="timer"><b id="timer">25:00</b><small id="sub">DAY 1</small></div>
     <div class="log" id="log"></div>
   </header>
 
@@ -137,8 +137,6 @@ details>summary::-webkit-details-marker{display:none}
   <aside class="rail px" id="rail">
     <div class="stack">
       <button class="primary full" id="go">START</button>
-      <button id="theme">LIGHT / DARK</button>
-      <button id="season">SEASON: AUTO</button>
       <button class="linkbtn full" id="letgo" style="display:none">let it go (colony walks home, no harm done)</button>
     </div>
     <details class="colony-wrap" id="colonyWrap" open>
@@ -571,12 +569,12 @@ for(const c of CH){
   g.visible=c.built;
 }
 // tunnel back wall
-const backWall=new THREE.Mesh(new THREE.PlaneGeometry(COLS*CELL,SOILH),new THREE.MeshLambertMaterial({color:0x6F4128}));
+const backWall=new THREE.Mesh(new THREE.PlaneGeometry(COLS*CELL,SOILH),new THREE.MeshLambertMaterial({color:0x8B5A3C}));
 backWall.position.set(0,-SOILH/2,-DEPTH/2+.05); backWall.receiveShadow=true; world.add(backWall);
 
 // glass front + frame
 const GZ=DEPTH/2+.06, TANKH=3.4, TW=COLS*CELL, TH=SOILH+TANKH, TCY=(TANKH-SOILH)/2;
-const glassMat=new THREE.MeshBasicMaterial({color:0xBFE3F5,transparent:true,opacity:.1,depthWrite:false,side:THREE.DoubleSide});
+const glassMat=new THREE.MeshBasicMaterial({color:0xE8F4FF,transparent:true,opacity:.035,depthWrite:false,side:THREE.DoubleSide});
 function glassPane(w,h,x,y,z,ry,rx){ const g=new THREE.Mesh(new THREE.PlaneGeometry(w,h),glassMat); g.position.set(x,y,z); g.rotation.set(rx||0,ry||0,0); g.renderOrder=5; world.add(g); return g; }
 glassPane(TW+.1,TH,0,TCY,GZ); glassPane(TW+.1,TH,0,TCY,-GZ);
 glassPane(DEPTH+.12,TH,-(TW/2+.06),TCY,0,Math.PI/2); glassPane(DEPTH+.12,TH,(TW/2+.06),TCY,0,Math.PI/2);
@@ -701,7 +699,7 @@ function buildTrim(level){
   }
 }
 // glass streaks
-for(const [x,w,o] of [[-3.2,.7,.07],[-2.2,.25,.06],[3.8,.5,.05]]){
+for(const [x,w,o] of [[-3.2,.7,.025],[-2.2,.25,.02],[3.8,.5,.02]]){
   const g=new THREE.Mesh(new THREE.PlaneGeometry(w,SOILH*.8),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:o,depthWrite:false}));
   g.position.set(x,-SOILH/2,GZ+.01); g.rotation.z=.5; g.renderOrder=6; world.add(g);
 }
@@ -1534,7 +1532,7 @@ function updateSky(){
   const lamp=smooth(.2,.8,nightF);
   flood.intensity=0; (lampHead.material).color.setHex(lamp>.3?0xFFD07A:0x3E2A20);
   for(const c of CH){
-    const on=c.built?1:0, base=lerp(1.4,3.4,nightF);
+    const on=c.built?1:0, base=lerp(2.4,4.0,nightF);
     c.lit+=((on)-c.lit)*.05; if(c.clutter) c.clutter.visible=!!c.built;
     c.light.intensity=(base+c.glow*3.5+Math.min(c.stock,12)*.06)*c.lit;
     c.halo.material.opacity=(.18+c.glow*.55+nightF*.2)*c.lit*(c.stock>0||c.glow>.05?1:.5);
@@ -1543,7 +1541,7 @@ function updateSky(){
   postMat.uniforms.uGrade.value.set(...(GRADE[seasonShown()]));
 }
 const GRADE=[[.012,-.01,.015],[.015,.012,.032],[0,.025,.05],[.045,-.012,-.05]];
-function seasonShown(){ return colony.seasonMode>=0?colony.seasonMode:autoSeason(); }
+function seasonShown(){ return 1; }   // indoor tank: one fixed, warm humid look
 function colonyDay(){ return Math.floor((Date.now()-colony.start)/86400000); }
 function autoSeason(){ return Math.floor(colonyDay()/7)%4; }
 function applySeason(){
@@ -1569,7 +1567,7 @@ function refreshUI(){
   $('sToday').textContent=pad3(todayTrips());
   const m=Math.floor(Math.max(0,F.left)/60), s=Math.floor(Math.max(0,F.left)%60);
   $('timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-  $('sub').textContent=`DAY ${colonyDay()+1} · ${SEASONS[seasonShown()]}`;
+  $('sub').textContent=`DAY ${colonyDay()+1}`;
   const cap=workerCap();
   const hb=$('bHatch'); hb.disabled=colony.food<1||ants.length+brood.length>=cap; hb.querySelector('span').textContent=`1 food · ${ants.length+brood.length}/${cap} workers`;
   const ns=nextSlot(), db=$('bDig');
@@ -1580,7 +1578,6 @@ function refreshUI(){
   const cb=$('bCase');
   if(colony.glass>=3){ cb.disabled=true; cb.querySelector('span').textContent='Largest case'; }
   else { cb.disabled=colony.food<CASE_COST[colony.glass]; cb.querySelector('span').textContent=`${CASE_COST[colony.glass]} food · cap ${CAPS[colony.glass]} → ${CAPS[colony.glass+1]} workers`; }
-  $('season').textContent='SEASON: '+(colony.seasonMode<0?'AUTO ('+SEASONS[autoSeason()]+')':SEASONS[colony.seasonMode]);
 }
 $('bHatch').onclick=()=>{ if(colony.food<1) return; colony.food--; startHatch(); log('An egg is laid in the nursery.'); refreshUI(); save(); };
 $('bDig').onclick=()=>{ const ns=nextSlot(); if(ns) startDig(ns); };
@@ -1593,8 +1590,6 @@ $('task').addEventListener('keydown',e=>{
   else if(e.key.length===1&&!e.metaKey&&!e.ctrlKey&&taskText().length>=40) e.preventDefault();
 });
 $('task').addEventListener('paste',e=>{ e.preventDefault(); const t=((e.clipboardData||window.clipboardData).getData('text')||'').replace(/\s+/g,' ').slice(0,40); document.execCommand('insertText',false,t); });
-$('theme').onclick=()=>{ const d=document.body.dataset.theme==='dark'?'light':'dark'; document.body.dataset.theme=d; save(); };
-$('season').onclick=()=>{ colony.seasonMode=colony.seasonMode>=3?-1:colony.seasonMode+1; applySeason(); save(); };
 $('cardX').onclick=()=>$('card').classList.remove('on');
 $('demo').onclick=()=>{ timeScale=25; colony.food+=5; log('Preview mode: the 25 min timer runs 25× faster.'); refreshUI(); save(); };
 $('uiToggle').onclick=()=>document.body.classList.toggle('show-ui');
@@ -1608,14 +1603,13 @@ document.addEventListener('visibilitychange',()=>{
 const KEY='antNestFocus.v1';
 function save(){
   try{ localStorage.setItem(KEY,JSON.stringify({food:colony.food,glass:colony.glass,start:colony.start,trips:colony.trips,today:colony.today,todayKey:colony.todayKey,
-    seasonMode:colony.seasonMode,workers:ants.length,built:CH.filter(c=>c.built&&c.from).map(c=>c.id),theme:document.body.dataset.theme,
+    workers:ants.length,built:CH.filter(c=>c.built&&c.from).map(c=>c.id),
     stock:CH.map(c=>c.stock||0)})); }catch(e){}
 }
 function load(){
   let d=null; try{ d=JSON.parse(localStorage.getItem(KEY)||'null'); }catch(e){}
   if(!d) return false;
   colony.food=d.food|0; colony.glass=clamp(d.glass|0,0,3); colony.start=d.start||Date.now(); colony.trips=d.trips|0; colony.today=d.today|0; colony.todayKey=d.todayKey||''; colony.seasonMode=(d.seasonMode===undefined?-1:d.seasonMode);
-  if(d.theme) document.body.dataset.theme=d.theme;
   // rebuild dug chambers instantly
   for(const id of (d.built||[])){
     const c=CH.find(x=>x.id===id); if(!c||c.built) continue; c.built=true;

@@ -155,7 +155,7 @@ details>summary::-webkit-details-marker{display:none}
 
   <details class="how" id="how">
     <summary>how it's drawn</summary>
-    <p><b>Render.</b> The scene is drawn by three.js (r160) into a tiny <code>~480×300</code> target with no anti-aliasing, then scaled up with <code>texelFetch</code>. An orthographic camera sits at 31° elevation and snaps to quarter-turn azimuths. A depth pass darkens any pixel more than 0.5 world units in front of a neighbour.</p>
+    <p><b>Render.</b> The scene is drawn by three.js (r160) into a small nearest-filtered target (about 420 px on the short side, finer than the original 480×300) with no anti-aliasing, then scaled up with <code>texelFetch</code>. An orthographic camera sits at 31° elevation and snaps to quarter-turn azimuths. A depth pass darkens any pixel more than 0.5 world units in front of a neighbour.</p>
     <p><b>Palette.</b> Every pixel is matched to one of 64 fixed colours in OKLab, after a 4×4 Bayer dither nudges its lightness. Nothing outside this palette ever reaches the screen:</p>
     <div class="sw" id="sw"></div>
     <p><b>Why the nest works this way.</b> Walter Tschinkel cast and excavated nests of the Florida harvester ant (<i>Pogonomyrmex badius</i>). Nest depth, chamber count and chamber area increase with colony size, so deeper chambers here need more workers and cost more food. Seeds are stored deep and brood sits low, while foragers work near the top (Tschinkel 1999, <i>Ecological Entomology</i> 24:222; Tschinkel 2004, <i>J. Insect Science</i> 4:21).</p>
@@ -309,7 +309,7 @@ const postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 let viewH=17.5;
 function resize(){
   const w=Math.max(1,innerWidth), h=Math.max(1,innerHeight), a=w/h;
-  if(a>=1){rtH=300;rtW=Math.min(720,Math.round(300*a));}else{rtW=300;rtH=Math.min(720,Math.round(300/a));}
+  if(a>=1){rtH=420;rtW=Math.min(900,Math.round(420*a));}else{rtW=360;rtH=Math.min(900,Math.round(360/a));}
   renderer.setSize(w,h,false);
   if(rt){rt.dispose();rt.depthTexture&&rt.depthTexture.dispose();}
   const dt=new THREE.DepthTexture(rtW,rtH); dt.type=THREE.UnsignedIntType; dt.minFilter=THREE.NearestFilter; dt.magFilter=THREE.NearestFilter;
@@ -336,18 +336,19 @@ camera.position.set(
 const controls=new OrbitControls(camera,canvas);
 controls.target.copy(target0);
 controls.enableDamping=false;
-controls.minPolarAngle=POLAR; controls.maxPolarAngle=POLAR;
-controls.rotateSpeed=0.8;
-controls.minZoom=0.85; controls.maxZoom=6;
+controls.minPolarAngle=.06; controls.maxPolarAngle=Math.PI-.06;   // free orbit, even from underneath
+controls.rotateSpeed=1.0;
+controls.minZoom=0.4; controls.maxZoom=14;
 controls.zoomToCursor=true;
 controls.screenSpacePanning=true;
 controls.update();
 let snapAz=null, dragging=false;
 controls.addEventListener('start',()=>{snapAz=null;dragging=true});
-controls.addEventListener('end',()=>{
-  dragging=false;
-  const az=controls.getAzimuthalAngle();
-  snapAz=Math.round((az-AZ0)/(Math.PI/2))*(Math.PI/2)+AZ0;
+controls.addEventListener('end',()=>{ dragging=false; });
+canvas.addEventListener('dblclick',()=>{      // double click / tap: back to the default isometric view
+  camera.zoom=1; camera.updateProjectionMatrix(); controls.target.copy(target0);
+  camera.position.set(target0.x+CAM_DIST*Math.cos(ELEV)*Math.sin(AZ0),target0.y+CAM_DIST*Math.sin(ELEV),target0.z+CAM_DIST*Math.cos(ELEV)*Math.cos(AZ0));
+  controls.update();
 });
 function stepSnap(dt){
   if(snapAz===null) return;
@@ -363,7 +364,7 @@ function rotCam(s){
   controls.update();
 }
 function clampPan(){
-  const t=controls.target, cx=clamp(t.x,-6.5,6.5), cy=clamp(t.y,-8.5,1.5), cz=clamp(t.z,-2,2);
+  const t=controls.target, cx=clamp(t.x,-9,9), cy=clamp(t.y,-13,3), cz=clamp(t.z,-6,6);
   if(cx!==t.x||cy!==t.y||cz!==t.z){
     const d=new THREE.Vector3(cx-t.x,cy-t.y,cz-t.z);
     t.add(d); camera.position.add(d);
@@ -373,7 +374,7 @@ function clampPan(){
 /* =====================================================================
    4. nest data model: grid cross-section + navigation graph
    ===================================================================== */
-const CELL=.25, COLS=56, ROWS=22, DEPTH=3, X0=-COLS*CELL/2;
+const CELL=.125, COLS=112, ROWS=44, DEPTH=3, X0=-COLS*CELL/2;
 const cellX=i=>X0+(i+.5)*CELL, cellY=j=>-(j+.5)*CELL;
 const SOILH=ROWS*CELL;              // 5.5
 const NODE={};
@@ -445,7 +446,7 @@ function cellsCapsule(ax,ay,bx,by,r){
     const px=cellX(i), py=cellY(j);
     const t=clamp(((px-ax)*dx+(py-ay)*dy)/L2,0,1);
     const d=Math.hypot(px-(ax+dx*t),py-(ay+dy*t));
-    if(d<r+.04) out.push({i,j,t,L:Math.sqrt(L2)});
+    if(d<r+CELL*.16) out.push({i,j,t,L:Math.sqrt(L2)});
   }
   return out;
 }
@@ -466,13 +467,12 @@ function cellsEllipse(cx,cy,rx,ry){
 const SEASONS=['SPRING','SUMMER','AUTUMN','WINTER'];
 const GRASS_SET=[['#98C88F','#7BAE7F'],['#7BAE7F','#5A8A6E'],['#8FA03A','#C2D14F','#E8A93C'],['#C9C6C0','#F5F1E8','#9A978F']];
 function layerColor(i,j){
-  const wob=Math.round(Math.sin(i*.37)*.9+Math.sin(i*.91+2)*.6);
+  const wob=Math.round((Math.sin(i*.185)*.9+Math.sin(i*.45+2)*.6)*2);
   const jj=j-wob;
   const r=R();
-  if(j===0) return null; // grass handled separately
-  if(R()<.025) return pick2(['#9A978F','#6B6962'],r);
-  if(jj<=7) return pick2(['#C67B5C','#C67B5C','#A8603F','#E39A78'],r);
-  if(jj<=10) return pick2(['#E6D5C3','#E6D5C3','#D4BC9C','#F0E2CF'],r);
+  if(R()<.03) return pick2(['#9A978F','#6B6962'],r);
+  if(jj<=14) return pick2(['#C67B5C','#C67B5C','#A8603F','#E39A78'],r);
+  if(jj<=21) return pick2(['#E6D5C3','#E6D5C3','#D4BC9C','#F0E2CF'],r);
   return pick2(['#8B5A3C','#8B5A3C','#6F4128','#5A3A2A'],r);
 }
 function pick2(a,r){return a[Math.min(a.length-1,Math.floor(r*a.length))]}
@@ -493,7 +493,7 @@ for(let j=0;j<ROWS;j++)for(let i=0;i<COLS;i++){
 }
 world.add(soil);
 // rounded corner shadows: where soil meets a hole on two sides, a dark quarter-fillet eats the corner
-const FR=CELL*.55, FMAX=900;
+const FR=CELL*.55, FMAX=3500;
 const filShape=new THREE.Shape(); filShape.moveTo(0,0); filShape.lineTo(-FR,0); filShape.absarc(-FR,-FR,FR,Math.PI/2,0,true); filShape.lineTo(0,0);
 const fillets=new THREE.InstancedMesh(new THREE.ShapeGeometry(filShape,6),new THREE.MeshBasicMaterial({color:0x2B1D17,side:THREE.DoubleSide}),FMAX);
 fillets.frustumCulled=false; fillets.count=0; world.add(fillets);
@@ -538,6 +538,34 @@ function carveInitial(){
 }
 carveInitial();
 
+// roots hanging into the topsoil (only drawn where the soil is solid)
+{
+  const rootsMat=new THREE.MeshLambertMaterial({color:0xD4BC9C}), rects=[];
+  const rr0=mulberry32(4242);
+  for(let c=0;c<16;c++){
+    let x=(rr0()-.5)*13.4; if(x>-4.1&&x<-1.9) continue;
+    let y=-.12; const n=5+Math.floor(rr0()*9);
+    for(let k=0;k<n;k++){
+      const i=Math.floor((x-X0)/CELL), j=Math.floor(-y/CELL); if(j<1||j>=ROWS||i<0||i>=COLS) break;
+      rects.push([x,y-.055,.03+rr0()*.012,.13]); y-=.11; x+=(rr0()-.5)*.07;
+      if(y<-1.15) break;
+    }
+  }
+  const roots=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,.02),rootsMat,rects.length);
+  rects.forEach((r,i)=>{ _m.compose(_p.set(r[0],r[1],DEPTH/2+.01),_q.identity(),_s.set(r[2],r[3],1)); roots.setMatrixAt(i,_m); });
+  roots.frustumCulled=false; world.add(roots);
+}
+// pebbles and husks on chamber floors
+for(const c of CH){
+  const g=new THREE.Group(); c.clutter=g; world.add(g);
+  const rnd=mulberry32(c.id.charCodeAt(0)*31);
+  for(let k=0;k<5;k++){
+    const m=box(.04+rnd()*.05,.03+rnd()*.03,.04+rnd()*.04,new THREE.MeshLambertMaterial({color:pick2(['#9A978F','#6B6962','#B89B7E','#7A5C46'],rnd())}),
+      c.cx+(rnd()-.5)*c.rx*1.5,c.cy-c.ry+.025,.2+rnd()*1.1,g,false);
+    m.rotation.y=rnd()*3;
+  }
+  g.visible=c.built;
+}
 // tunnel back wall
 const backWall=new THREE.Mesh(new THREE.PlaneGeometry(COLS*CELL,SOILH),new THREE.MeshLambertMaterial({color:0x6F4128}));
 backWall.position.set(0,-SOILH/2,-DEPTH/2+.05); backWall.receiveShadow=true; world.add(backWall);
@@ -718,8 +746,8 @@ for(let k=0;k<4;k++){
 /* =====================================================================
    8. ants: rigs (3 boxes + 6 two-bone IK legs), instanced
    ===================================================================== */
-const PARTS=15, MAXANTS=50;
-const antMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x1A1A1A,emissive:0x3E2A20}),MAXANTS*PARTS);
+const PARTS=24, MAXANTS=50;
+const antMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x2B1D17}),MAXANTS*PARTS);
 antMesh.castShadow=true; antMesh.frustumCulled=false; world.add(antMesh);
 _m.makeScale(0,0,0); for(let i=0;i<MAXANTS*PARTS;i++) antMesh.setMatrixAt(i,_m);
 antMesh.count=0;
@@ -728,10 +756,11 @@ seedInst.frustumCulled=false; world.add(seedInst);
 const SEED_CARRY=40; // slots 0..39 carried, 40.. stock
 for(let i=0;i<200;i++) seedInst.setMatrixAt(i,_m);
 
-const A_LEG=.14,B_LEG=.16;
+const A_LEG=.15,B_LEG=.2;
 const _q2=new THREE.Quaternion(),_q3=new THREE.Quaternion(),_Yax=new THREE.Vector3(0,1,0);
+const _a1=new THREE.Vector3(),_a2=new THREE.Vector3(),_a3=new THREE.Vector3(),_hp=new THREE.Vector3();
 const _f2=new THREE.Vector3(),_u2=new THREE.Vector3(),_l2=new THREE.Vector3();
-const HIP_F=[.08,.02,-.05], FOOT_F=[.17,.04,-.12];
+const HIP_F=[.05,0,-.05], FOOT_F=[.2,.04,-.14];
 const _f=new THREE.Vector3(),_u=new THREE.Vector3(),_l=new THREE.Vector3(),_bm=new THREE.Matrix4();
 const _h=new THREE.Vector3(),_ft=new THREE.Vector3(),_kn=new THREE.Vector3(),_pole=new THREE.Vector3(),_d=new THREE.Vector3(),_pp=new THREE.Vector3(),_z=new THREE.Vector3(0,0,1),_v=new THREE.Vector3();
 const ants=[];
@@ -743,6 +772,9 @@ function newAnt(nodeId,scale=1){
     role:null,pauseT:0,lookYaw:0,legs:[],scale,born:performance.now(),face:null,bob:rr(0,6),lastEdgeFrom:null};
   for(let i=0;i<6;i++) a.legs.push({p:new THREE.Vector3(),from:new THREE.Vector3(),to:new THREE.Vector3(),t:1,stepping:false});
   ants.push(a); antMesh.count=ants.length*PARTS;
+  { const cc=new THREE.Color(0x1A1A1A).lerp(new THREE.Color(0x4A2B1E),Math.random()*.75);   // each ant a slightly different dark brown
+    for(let q=0;q<PARTS;q++) antMesh.setColorAt((ants.length-1)*PARTS+q,cc);
+    antMesh.instanceColor.needsUpdate=true; }
   snapFeet(a); return a;
 }
 function antFrame(a){
@@ -754,7 +786,7 @@ function snapFeet(a){
 }
 function restFoot(a,i,out){
   const k=i%3, s=i<3?1:-1, sc=a.scale;
-  out.set(a.x,a.y,a.z).addScaledVector(_f,FOOT_F[k]*sc).addScaledVector(_u,-.17*sc).addScaledVector(_l,s*.17*sc);
+  out.set(a.x,a.y,a.z).addScaledVector(_f,FOOT_F[k]*sc).addScaledVector(_u,-.19*sc).addScaledVector(_l,s*.15*sc);
   return out;
 }
 function setSeg(idx,a,b,th){
@@ -779,57 +811,72 @@ function ik(h,f,pole,out){
 function drawAnt(a,slot,dt,time){
   antFrame(a);
   const sc=a.scale, base=slot*PARTS;
-  // animation: head bob etc.
   a.animT+=dt*(a.anim?9:4);
-  let bob=a.moving?Math.sin(a.bob)*.012:0, headDy=0, headDf=0, abd=0;
-  if(a.anim==='tend'||a.anim==='chew'){ headDy=Math.sin(a.animT)*.045-.02; headDf=Math.sin(a.animT*.5)*.03; }
-  else if(a.anim==='idle'){ headDy=Math.sin(a.animT*.5)*.02; }
-  else if(a.anim==='dig'){ headDy=-Math.abs(Math.sin(a.animT*1.3))*.07; headDf=Math.abs(Math.sin(a.animT*1.3))*.05; }
-  else if(a.anim==='cheer'){ abd=Math.sin(a.animT*1.2)*.07; headDy=Math.abs(Math.sin(a.animT))*.05; }
+  let bob=a.moving?Math.sin(a.bob)*.012:0, headDy=0, headDf=0, abd=0, jaw=0;
+  if(a.anim==='tend'||a.anim==='chew'){ headDy=Math.sin(a.animT)*.04-.02; headDf=Math.sin(a.animT*.5)*.025; jaw=.5+.5*Math.sin(a.animT*2); }
+  else if(a.anim==='idle'){ headDy=Math.sin(a.animT*.5)*.015; }
+  else if(a.anim==='dig'){ headDy=-Math.abs(Math.sin(a.animT*1.3))*.06; headDf=Math.abs(Math.sin(a.animT*1.3))*.04; jaw=.5+.5*Math.sin(a.animT*2.6); }
+  else if(a.anim==='cheer'){ abd=Math.sin(a.animT*1.2)*.06; headDy=Math.abs(Math.sin(a.animT))*.04; }
   if(a.carry==='seedbig'||a.carry==='dead') headDy+=.02;
   _bm.makeBasis(_f,_u,_l); _q.setFromRotationMatrix(_bm);
   const P=_pp.set(a.x,a.y+bob,a.z);
-  // abdomen
-  _p.copy(P).addScaledVector(_f,-.12*sc).addScaledVector(_u,(.03+abd+Math.sin(time*2.6+a.id*1.7)*.02)*sc); _s.set(.22*sc,.17*sc,.16*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+2,_m);
-  // thorax
-  _p.copy(P).addScaledVector(_u,.0); _s.set(.14*sc,.11*sc,.1*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+1,_m);
-  // head: gentle wobble, antenna touch at the seed, look left/right at the nest entrance
+  const f=_f2.copy(_f), u=_u2.copy(_u), l=_l2.copy(_l);
+  const drag=Math.sin(time*2.6+a.id*1.7)*.015;
+  // thorax (narrow, real ants have a slim mesosoma)
+  _p.copy(P); _s.set(.14*sc,.075*sc,.075*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+1,_m);
+  // petiole: the tiny waist
+  _p.copy(P).addScaledVector(f,-.085*sc).addScaledVector(u,.005*sc); _s.set(.035*sc,.04*sc,.04*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+15,_m);
+  // gaster: big, slightly raised, two boxes for an egg shape
+  _p.copy(P).addScaledVector(f,-.19*sc).addScaledVector(u,(.022+abd+drag)*sc); _s.set(.18*sc,.115*sc,.105*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+2,_m);
+  _p.copy(P).addScaledVector(f,-.305*sc).addScaledVector(u,(.012+abd*1.2+drag)*sc); _s.set(.07*sc,.08*sc,.08*sc); _m.compose(_p,_q,_s); antMesh.setMatrixAt(base+16,_m);
+  // head: wobble, antenna touch at the seed, look around at the nest entrance
   const yaw=Math.sin(time*2+a.id)*.08+a.lookYaw;
-  let pitch=0; if(a.anim==='touch') pitch=-.3*Math.sin((1-clamp(a.wait/.5,0,1))*Math.PI);
+  let pitch=0, tp=0; if(a.anim==='touch'){ tp=Math.sin((1-clamp(a.wait/.5,0,1))*Math.PI); pitch=-.3*tp; }
   _q2.copy(_q).multiply(_q3.setFromAxisAngle(_Yax,yaw)).multiply(_q3.setFromAxisAngle(_z,pitch));
-  _p.copy(P).addScaledVector(_f,(.2+headDf)*sc).addScaledVector(_u,(.01+headDy)*sc); _s.set(.12*sc,.12*sc,.12*sc); _m.compose(_p,_q2,_s); antMesh.setMatrixAt(base+0,_m);
-  // legs (stepping, then IK)
+  _hp.copy(P).addScaledVector(f,(.118+headDf)*sc).addScaledVector(u,(-.004+headDy)*sc);
+  _s.set(.09*sc,.085*sc,.1*sc); _m.compose(_hp,_q2,_s); antMesh.setMatrixAt(base+0,_m);
+  // mandibles
+  for(let sd=0;sd<2;sd++){ const sg=sd?-1:1;
+    _p.copy(_hp).addScaledVector(f,.058*sc).addScaledVector(u,-.02*sc).addScaledVector(l,sg*(.026+jaw*.014)*sc);
+    _s.set(.035*sc,.014*sc,.016*sc); _m.compose(_p,_q2,_s); antMesh.setMatrixAt(base+17+sd,_m); }
+  // legs (tripod stepping, then two-bone IK; long and spidery like the real thing)
   const v=a.moving?a.speed:0;
   const stepDur=clamp(.13/(1+v*.4),.08,.14);
   let stepA=false, stepB=false;
   for(let i=0;i<6;i++) if(a.legs[i].stepping){ if(i%2===0) stepA=true; else stepB=true; }
-  const f=_f2.copy(_f), u=_u2.copy(_u), l=_l2.copy(_l);
   for(let i=0;i<6;i++){
     const leg=a.legs[i], k=i%3, s=i<3?1:-1, grp=(i===0||i===2||i===4)?0:1;
     restFoot(a,i,_ft);
     if(leg.stepping){
       leg.t+=dt/stepDur;
       if(leg.t>=1){ leg.t=1; leg.stepping=false; leg.p.copy(leg.to); }
-      else { leg.p.lerpVectors(leg.from,leg.to,leg.t).addScaledVector(u,Math.sin(leg.t*Math.PI)*.07*sc); }
+      else { leg.p.lerpVectors(leg.from,leg.to,leg.t).addScaledVector(u,Math.sin(leg.t*Math.PI)*.085*sc); }
     } else {
       const dd=leg.p.distanceTo(_ft);
-      if(dd>.5){ leg.p.copy(_ft); }
-      else if(dd>.1*sc && !(grp===0?stepB:stepA)){
+      if(dd>.6) leg.p.copy(_ft);
+      else if(dd>.13*sc && !(grp===0?stepB:stepA)){
         leg.stepping=true; leg.t=0; leg.from.copy(leg.p);
-        leg.to.copy(_ft).addScaledVector(f,v*stepDur*.6*(a.moving?1:0)+ (a.moving?.0:0));
+        leg.to.copy(_ft).addScaledVector(f,a.moving?v*stepDur*.6:0);
         if(grp===0) stepA=true; else stepB=true;
       }
     }
-    _h.copy(P).addScaledVector(f,HIP_F[k]*sc).addScaledVector(u,-.04*sc).addScaledVector(l,s*.04*sc);
-    _pole.copy(u).multiplyScalar(.7).addScaledVector(l,s*.5);
+    _h.copy(P).addScaledVector(f,HIP_F[k]*sc).addScaledVector(u,-.03*sc).addScaledVector(l,s*.035*sc);
+    _pole.copy(u).multiplyScalar(.9).addScaledVector(l,s*.35).addScaledVector(f,k===0?.25:(k===2?-.25:0));
     ik(_h,leg.p,_pole,_kn);
     const o=base+3+i*2;
     _v.copy(_kn);
-    setSeg(o,_h,_v,.055*sc);
-    // foot may be out of reach: clamp end of lower bone along direction
+    setSeg(o,_h,_v,.045*sc);
     _d.subVectors(leg.p,_kn); const ll=_d.length();
-    if(ll>B_LEG*sc*1.15){ _d.multiplyScalar(B_LEG/ll); _ft.copy(_kn).add(_d); setSeg(o+1,_kn,_ft,.045*sc); }
-    else setSeg(o+1,_kn,leg.p,.045*sc);
+    if(ll>B_LEG*sc*1.15){ _d.multiplyScalar(B_LEG/ll); _ft.copy(_kn).add(_d); setSeg(o+1,_kn,_ft,.032*sc); }
+    else setSeg(o+1,_kn,leg.p,.032*sc);
+  }
+  // elbowed antennae: scape up and out, flagellum drooping forward, always twitching
+  for(let sd=0;sd<2;sd++){ const sg=sd?-1:1;
+    _a1.copy(_hp).addScaledVector(f,.04*sc).addScaledVector(u,.025*sc).addScaledVector(l,sg*.025*sc);
+    _a2.copy(f).multiplyScalar(.6).addScaledVector(u,.65).addScaledVector(l,sg*.35).normalize().multiplyScalar(.09*sc).add(_a1);
+    const w=Math.sin(time*3.1+a.id*.7+sd*1.3);
+    _a3.copy(f).multiplyScalar(.8+tp*.5).addScaledVector(u,-.25-tp*.6+w*.3).addScaledVector(l,sg*.3+w*.15).normalize().multiplyScalar(.13*sc).add(_a2);
+    setSeg(base+19+sd*2,_a1,_a2,.022*sc); setSeg(base+20+sd*2,_a2,_a3,.017*sc);
   }
 }
 
@@ -1094,10 +1141,10 @@ function startDig(c){
 function updateDig(dt){
   const J=dig.job; if(!J) return;
   const workers=ants.filter(a=>a.anim==='dig'&&Math.hypot(a.x-NODE.tip.x,a.y-NODE.tip.y)<.9).length;
-  J.acc+=dt*(.6+workers*1.1);
+  J.acc+=dt*(.6+workers*1.1)*4;
   while(J.acc>=1&&J.i<J.cells.length){
     J.acc-=1; const cl=J.cells[J.i++];
-    removeCell(cl.i,cl.j); spawnDebris(cellX(cl.i),cellY(cl.j),0x8B5A3C);
+    removeCell(cl.i,cl.j); if(J.i%3===0) spawnDebris(cellX(cl.i),cellY(cl.j),0x8B5A3C);
     const c=J.c, a=NODE[c.from], b=NODE[c.nodeId];
     if(J.i<=J.tunN){ const t=cl.t!==undefined?cl.t:1; NODE.tip.x=lerp(a.x,b.x,t); NODE.tip.y=lerp(a.y,b.y,t); }
     else { NODE.tip.x=b.x; NODE.tip.y=b.y; }
@@ -1373,7 +1420,7 @@ function updateSky(){
   crystalLight.intensity=lerp(3,8,nightF);
   for(const c of CH){
     const on=c.built?1:0, base=lerp(1.4,3.4,nightF);
-    c.lit+=((on)-c.lit)*.05;
+    c.lit+=((on)-c.lit)*.05; if(c.clutter) c.clutter.visible=!!c.built;
     c.light.intensity=(base+c.glow*3.5+Math.min(c.stock,12)*.06)*c.lit;
     c.halo.material.opacity=(.18+c.glow*.55+nightF*.2)*c.lit*(c.stock>0||c.glow>.05?1:.5);
   }

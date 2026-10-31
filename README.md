@@ -7,8 +7,8 @@ A single-file, pixel-art 3D focus timer. Your task becomes a glowing seed; a 25-
 - **Stack:** three.js r160 (import map from jsDelivr), OrbitControls, Google Fonts (Silkscreen, Rubik, JetBrains Mono)
 
 ## Rendering pipeline
-- Orthographic isometric camera, 31 degree elevation, azimuth snaps in quarter turns
-- Scene renders to a small target (~480x300, no anti-aliasing, nearest filter), upscaled with `texelFetch`
+- Orthographic isometric camera starts at 31 degree elevation; orbit, pan and zoom are free (double click resets)
+- Scene renders to a small target (about 420 px on the short side, no anti-aliasing, nearest filter), upscaled with `texelFetch`
 - Post pass: depth outlines (neighbour more than 0.5 units behind darkens 0.5x), 4x4 Bayer dither, fixed 64-colour palette matched in OKLab
 - Hard sun shadows; day/dusk/night follows the real clock
 
@@ -29,3 +29,4 @@ The logic was exercised headlessly against a stubbed three.js. The WebGL renderi
 ## Changelog
 - **Taste pass 1 (motion):** rounded dark corner fillets where soil meets a carved hole; per-ant speed variance, head wobble, belly drag, 0.5s antenna touch at the seed, 1s look-left/right at the nest entrance, ~70% of idle time spent in slight idle; seed pulses 1.0 to 1.15 over 2s with two orbiting light motes.
 - **Taste pass 2 (typography):** two-line 48px title, "FEED" kicker, vertical right-edge scoreboard (FOOD / WORKERS / TODAY), task entry is a hanging wooden sign (tap to edit), controls bottom-left, collapsed 9px footer bottom-right. Render pipeline untouched.
+- **Pass 3:** finer render target (420 px short side) and half-size soil cells; free camera (no polar lock, no azimuth snap, zoom 0.4x-14x, wider pan); ants rebuilt with a slim thorax, petiole, egg-shaped gaster, long two-bone legs, mandibles and elbowed twitching antennae, each ant a slightly different dark brown; roots in the topsoil and pebbles/husks on chamber floors.

@@ -235,9 +235,9 @@ const camera=new THREE.OrthographicCamera(-10,10,10,-10,0.1,300);
 scene.add(camera);
 const world=new THREE.Group(); scene.add(world);
 
-const ELEV=31*Math.PI/180, AZ0=Math.PI/4, CAM_DIST=70;
-const target0=new THREE.Vector3(0,-2.4,0);
-const ZOOM0=innerWidth>=innerHeight?1.1:.85;
+const ELEV=12*Math.PI/180, AZ0=12*Math.PI/180, CAM_DIST=70;   // front-on, slightly from the right and above
+const target0=new THREE.Vector3(0,-1.6,0);
+const ZOOM0=innerWidth>=innerHeight?1.55:1.0;
 const POLAR=Math.PI/2-ELEV;
 
 const halfFloatOK=renderer.extensions.has('EXT_color_buffer_float')||renderer.extensions.has('EXT_color_buffer_half_float');
@@ -470,12 +470,11 @@ const SEASONS=['SPRING','SUMMER','AUTUMN','WINTER'];
 const GRASS_SET=[['#6E9E5E','#4E7A52','#98C88F'],['#4E7A52','#3C6046','#6E9E5E'],['#6E9E5E','#8FA03A','#4E7A52'],['#4E7A52','#5A8A6E','#3C6046']];
 function layerColor(i,j){
   const wob=Math.round((Math.sin(i*.185)*.9+Math.sin(i*.45+2)*.6)*2);
-  const jj=j-wob;
-  const r=R();
-  if(R()<.03) return pick2(['#9A978F','#6B6962'],r);
-  if(jj<=14) return pick2(['#C67B5C','#C67B5C','#A8603F','#E39A78'],r);
-  if(jj<=21) return pick2(['#E6D5C3','#E6D5C3','#D4BC9C','#F0E2CF'],r);
-  return pick2(['#8B5A3C','#8B5A3C','#6F4128','#5A3A2A'],r);
+  const jj=j-wob, r=R();
+  if(R()<.015) return pick2(['#6B6962','#454340'],r);
+  if(jj<=14) return r<.88?'#8B5A3C':'#7A5C46';
+  if(jj<=21) return r<.85?'#BFA17E':'#B89B7E';
+  return r<.88?'#6F4128':'#5A3A2A';
 }
 function pick2(a,r){return a[Math.min(a.length-1,Math.floor(r*a.length))]}
 
@@ -490,7 +489,7 @@ for(let j=0;j<ROWS;j++)for(let i=0;i<COLS;i++){
   _m.makeTranslation(cellX(i),cellY(j),0); soil.setMatrixAt(k,_m);
   if(j===0){ grassCells.push(k); _c.set('#4E7A52'); }
   else _c.set(layerColor(i,j));
-  const v=.92+R()*.14; _c.multiplyScalar(v);
+  const v=.97+R()*.06; _c.multiplyScalar(v);
   soil.setColorAt(k,_c);
 }
 world.add(soil);
@@ -569,7 +568,7 @@ for(const c of CH){
   g.visible=c.built;
 }
 // tunnel back wall
-const backWall=new THREE.Mesh(new THREE.PlaneGeometry(COLS*CELL,SOILH),new THREE.MeshLambertMaterial({color:0x8B5A3C}));
+const backWall=new THREE.Mesh(new THREE.PlaneGeometry(COLS*CELL,SOILH),new THREE.MeshLambertMaterial({color:0xB89B7E,emissive:0x4A2B1E}));
 backWall.position.set(0,-SOILH/2,-DEPTH/2+.05); backWall.receiveShadow=true; world.add(backWall);
 
 // glass front + frame
@@ -634,7 +633,7 @@ function book(w,h,d,color,x,y,z,ry){
 { let y=DY; for(const [w,h,d,c,dx,dz,ry] of [[5.6,.9,4.0,'#8A2F22',0,0,.08],[5.2,.8,3.8,'#2E4A8C',.2,.1,-.1],[5.0,1.0,3.6,'#E8A93C',-.1,-.1,.15],[4.6,.7,3.4,'#3C6046',.15,0,-.05]]){ book(w,h,d,c,-12.4+dx,y,-1.6+dz,ry); y+=h; }
   book(5.4,.8,3.7,'#C4532F',-15.6,DY,2.4,-.35); book(4.8,.7,3.4,'#8E6BB8',-15.4,DY+.8,2.3,.1);
   // open book with a pencil
-  const ob=new THREE.Group(); ob.position.set(-8.6,DY,4.2); ob.rotation.y=.18; room.add(ob);
+  const ob=new THREE.Group(); ob.position.set(-11.2,DY,4.4); ob.rotation.y=.18; room.add(ob);
   box(7.4,.2,4.8,lm(0x223566),0,.1,0,ob,true);
   const pl=box(3.3,.14,4.3,lm(0xF0E2CF),-1.7,.27,0,ob,false); pl.rotation.z=.05; const pr=box(3.3,.14,4.3,lm(0xF0E2CF),1.7,.27,0,ob,false); pr.rotation.z=-.05;
   for(let k=0;k<5;k++){ box(2.4,.02,.06,lm(0x9A978F),-1.7,.36,-1.5+k*.7,ob,false); box(2.4,.02,.06,lm(0x9A978F),1.7,.36,-1.5+k*.7,ob,false); }
@@ -652,7 +651,7 @@ function book(w,h,d,color,x,y,z,ry){
 }
 // laptop, screen softly lit
 {
-  const g=new THREE.Group(); g.position.set(11.4,DY,2.6); g.rotation.y=1.0; room.add(g);
+  const g=new THREE.Group(); g.position.set(13.4,DY,-2.4); g.rotation.y=-.35; room.add(g);
   const alu=lm(0x6B6962);
   box(7.6,.22,5.0,alu,0,.11,0,g,true);
   const kb=new THREE.Mesh(new THREE.PlaneGeometry(6.6,2.4),new THREE.MeshBasicMaterial({map:mkCanvas(66,24,(c,w,h)=>{ c.fillStyle='#2B1D17'; c.fillRect(0,0,w,h); for(let r=0;r<5;r++)for(let k=0;k<13;k++){ c.fillStyle='#454340'; c.fillRect(1+k*5,1+r*4,4,3); } c.fillStyle='#454340'; c.fillRect(16,20,34,3); }),color:0x9a9a9a}));
@@ -668,7 +667,7 @@ function book(w,h,d,color,x,y,z,ry){
 // mug with steam
 const steam=[];
 {
-  const g=new THREE.Group(); g.position.set(9.4,DY,-3.0); room.add(g);
+  const g=new THREE.Group(); g.position.set(9.6,DY,3.6); room.add(g);
   const mug=new THREE.Mesh(new THREE.CylinderGeometry(.9,.8,2.0,10),lm(0xF0E2CF)); mug.position.y=1.0; mug.castShadow=true; g.add(mug);
   const cof=new THREE.Mesh(new THREE.CylinderGeometry(.75,.75,.05,10),lm(0x3E2A20)); cof.position.y=1.92; g.add(cof);
   box(.25,1.1,.25,lm(0xF0E2CF),1.05,1.0,0,g,false).scale.set(1,1,1);
@@ -676,7 +675,7 @@ const steam=[];
 }
 // small plant and pencil cup
 {
-  const g=new THREE.Group(); g.position.set(14.2,DY,-3.4); room.add(g);
+  const g=new THREE.Group(); g.position.set(17.4,DY,-3.8); room.add(g);
   const pot=new THREE.Mesh(new THREE.CylinderGeometry(.95,.75,1.4,8),lm(0xC4532F)); pot.position.y=.7; pot.castShadow=true; g.add(pot);
   const lr=mulberry32(77);
   for(let k=0;k<7;k++){ const a=k/7*TAU, l=box(.14,.9+lr()*.5,.5,lm([0x4E7A52,0x6E9E5E,0x3C6046][k%3]),Math.cos(a)*.3,1.8,Math.sin(a)*.3,g,true); l.rotation.set(Math.sin(a)*.7,0,-Math.cos(a)*.7); }

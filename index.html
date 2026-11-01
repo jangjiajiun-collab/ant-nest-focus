@@ -1745,7 +1745,9 @@ refreshUI(); setBtn();
 requestAnimationFrame(frame);
 
 // small hooks for poking at the sim from the console
-window.ANT={ F, colony, ants, setHour:h=>{hourOverride=h}, fast:n=>{timeScale=n}, rain:()=>{weather.rainTarget=1;weather.rainEnd=performance.now()/1000+50}, wind:()=>{weather.windLeft=12}, food:n=>{colony.food+=n;refreshUI()}, drop:t=>{dropSeed(t||'test')}, start:()=>startFocus() };
+window.ANT={ F, colony, ants, three:{THREE,camera,controls,renderer,scene,world,postMat},
+  view:(azDeg,elDeg,zoom,ty)=>{ const az=azDeg*Math.PI/180, el=elDeg*Math.PI/180; if(ty!==undefined) controls.target.set(0,ty,0); const t=controls.target;
+    camera.position.set(t.x+CAM_DIST*Math.cos(el)*Math.sin(az),t.y+CAM_DIST*Math.sin(el),t.z+CAM_DIST*Math.cos(el)*Math.cos(az)); if(zoom) camera.zoom=zoom; camera.updateProjectionMatrix(); controls.update(); }, setHour:h=>{hourOverride=h}, fast:n=>{timeScale=n}, rain:()=>{weather.rainTarget=1;weather.rainEnd=performance.now()/1000+50}, wind:()=>{weather.windLeft=12}, food:n=>{colony.food+=n;refreshUI()}, drop:t=>{dropSeed(t||'test')}, start:()=>startFocus() };
 </script>
 </body>
 </html>
